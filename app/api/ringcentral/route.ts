@@ -230,13 +230,19 @@ export async function GET(request: Request) {
     const missedResultStatuses = ["Missed", "No Answer", "Not Answered", "Declined", "Sent to Voicemail"];
     const abandonedResultStatuses = ["Abandoned", "Hang Up", "Disconnected"];
 
-    missedCalls = queueLogs.filter((l: any) => 
-      missedResultStatuses.includes(l.result) || l.action === "Missed"
-    ).length;
+    // A call is abandoned if it has an explicit hang-up status OR was missed with a duration < 15 seconds
+    abandonedCalls = queueLogs.filter((l: any) => {
+      const isExplicitAbandon = abandonedResultStatuses.includes(l.result);
+      const isShortMissed = (missedResultStatuses.includes(l.result) || l.action === "Missed") && (l.duration || 0) < 15;
+      return isExplicitAbandon || isShortMissed;
+    }).length;
 
-    abandonedCalls = queueLogs.filter((l: any) => 
-      abandonedResultStatuses.includes(l.result)
-    ).length;
+    // A call is missed if it has a missed status and was not a short hang-up (duration >= 15 seconds)
+    missedCalls = queueLogs.filter((l: any) => {
+      const isMissedStatus = missedResultStatuses.includes(l.result) || l.action === "Missed";
+      const isShortMissed = isMissedStatus && (l.duration || 0) < 15;
+      return isMissedStatus && !isShortMissed;
+    }).length;
 
     answeredCalls = Math.max(0, totalCallsToday - missedCalls - abandonedCalls);
     
@@ -311,9 +317,11 @@ export async function GET(request: Request) {
     const occupancyRate = Math.min(98, Math.round((totalTalkTime / capacitySeconds) * 100));
 
     const missedCallsList = queueLogs
-      .filter((l: any) => 
-        missedResultStatuses.includes(l.result) || l.action === "Missed"
-      )
+      .filter((l: any) => {
+        const isMissedStatus = missedResultStatuses.includes(l.result) || l.action === "Missed";
+        const isShortMissed = isMissedStatus && (l.duration || 0) < 15;
+        return isMissedStatus && !isShortMissed;
+      })
       .map((l: any) => ({
         id: l.id || `missed-${Math.random().toString(36).substr(2, 9)}`,
         startTime: l.startTime,
