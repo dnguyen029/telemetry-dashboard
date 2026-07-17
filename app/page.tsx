@@ -114,6 +114,7 @@ export default function DashboardSuite() {
   const [rcLoading, setRcLoading] = useState(false);
   const [rcError, setRcError] = useState<string | null>(null);
   const [period, setPeriod] = useState<"DoD" | "WoW" | "MoM" | "QoQ">("WoW");
+  const [isMissedModalOpen, setIsMissedModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     return new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
   });
@@ -742,6 +743,11 @@ export default function DashboardSuite() {
                     sparklines={rcData.sparklines}
                     period={period}
                     setPeriod={setPeriod}
+                    onMetricClick={(metricName) => {
+                      if (metricName === "Missed Calls") {
+                        setIsMissedModalOpen(true);
+                      }
+                    }}
                   />
                 </div>
               )}
@@ -1150,6 +1156,93 @@ export default function DashboardSuite() {
 
             </CardContent>
           </Card>
+        </div>
+      )}
+      {/* Missed Calls Detail Modal */}
+      {isMissedModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative w-full max-w-4xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh]">
+            {/* Header */}
+            <div className="flex justify-between items-center p-5 border-b border-slate-200 dark:border-slate-800">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-red-500" />
+                  Missed Call Log Detail
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  List of inbound callers that were not answered on {selectedDate}
+                </p>
+              </div>
+              <button
+                onClick={() => setIsMissedModalOpen(false)}
+                className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                aria-label="Close dialog"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {(!rcData?.missedCallsList || rcData.missedCallsList.length === 0) ? (
+                <div className="flex flex-col items-center justify-center py-12 text-slate-400 dark:text-slate-500 space-y-2">
+                  <Phone className="w-8 h-8 opacity-40" />
+                  <p className="text-xs font-medium">No missed call details available for this day.</p>
+                </div>
+              ) : (
+                <div className="overflow-hidden border border-slate-200 dark:border-slate-800 rounded-lg">
+                  <Table>
+                    <TableHeader className="bg-slate-50 dark:bg-slate-950">
+                      <TableRow>
+                        <TableHead className="w-[140px] text-xs font-bold text-slate-500 dark:text-slate-400">Time</TableHead>
+                        <TableHead className="text-xs font-bold text-slate-500 dark:text-slate-400">Caller</TableHead>
+                        <TableHead className="text-xs font-bold text-slate-500 dark:text-slate-400">Number</TableHead>
+                        <TableHead className="text-xs font-bold text-slate-500 dark:text-slate-400">Target Queue / Ext</TableHead>
+                        <TableHead className="w-[100px] text-xs font-bold text-slate-500 dark:text-slate-400 text-right">Ring Time</TableHead>
+                        <TableHead className="w-[150px] text-xs font-bold text-slate-500 dark:text-slate-400 text-center">Result</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody className="divide-y divide-slate-100 dark:divide-slate-850">
+                      {rcData.missedCallsList.map((call: any) => {
+                        const formattedTime = new Date(call.startTime).toLocaleTimeString("en-US", {
+                          timeZone: "America/Los_Angeles",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit"
+                        });
+                        return (
+                          <TableRow key={call.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
+                            <TableCell className="font-mono text-xs text-slate-650 dark:text-slate-350">{formattedTime}</TableCell>
+                            <TableCell className="text-xs font-semibold text-slate-800 dark:text-slate-200">{call.fromName}</TableCell>
+                            <TableCell className="font-mono text-xs text-slate-650 dark:text-slate-350">{call.fromNumber}</TableCell>
+                            <TableCell className="text-xs text-slate-700 dark:text-slate-300">
+                              {call.toName} {call.toNumber !== "Support" && <span className="text-[10px] opacity-75 font-mono">({call.toNumber})</span>}
+                            </TableCell>
+                            <TableCell className="font-mono text-xs text-slate-800 dark:text-slate-200 text-right font-semibold">{call.duration}s</TableCell>
+                            <TableCell className="text-center">
+                              <Badge className="bg-red-500/10 text-red-500 hover:bg-red-500/15 border-none text-[10px] font-medium font-sans px-2 py-0.5 capitalize">
+                                {call.result.replace(/([A-Z])/g, ' $1').trim()}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex justify-between items-center px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+              <span className="text-[10px] text-slate-450 dark:text-slate-550 font-mono">
+                Total Logs: {rcData?.missedCallsList?.length || 0} calls
+              </span>
+              <Button size="sm" onClick={() => setIsMissedModalOpen(false)}>
+                Dismiss
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

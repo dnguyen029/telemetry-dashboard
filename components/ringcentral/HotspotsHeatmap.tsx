@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 
 interface HotspotsHeatmapProps {
   hotspotData: number[][]; // 7 days x 24 hours matrix
@@ -17,8 +17,8 @@ export default function HotspotsHeatmap({ hotspotData }: HotspotsHeatmapProps) {
 
   if (!hotspotData || hotspotData.length === 0) return null;
 
-  const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  const hoursLabels = ["12A", "4A", "8A", "12P", "4P", "8P"];
+  const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  const businessHoursRange = Array.from({ length: 12 }, (_, i) => i + 6); // hours 6 to 17
 
   const formatHourLabel = (h: number) => {
     if (h === 0) return "12 AM";
@@ -27,20 +27,21 @@ export default function HotspotsHeatmap({ hotspotData }: HotspotsHeatmapProps) {
     return `${h} AM`;
   };
 
-  // Find maximum value to normalize coloring
-  const flatData = hotspotData.flat();
-  const maxVal = Math.max(...flatData, 1);
+  // Slice hotspot data to business hours: 6 AM to 5 PM (indices 6 to 17 inclusive)
+  const slicedData = hotspotData.map(row => row.slice(6, 18));
 
-  // Compute color class based on intensity relative to max
+  // Find max value in business hours data for scaling
+  const maxVal = Math.max(...slicedData.flat(), 1);
+
+  // Red Warning Color Ramp
   const getCellColorClass = (count: number) => {
-    if (count === 0) return "bg-gray-100/40 hover:bg-gray-200/50";
+    if (count === 0) return "bg-[#FFF5F5]/30 text-slate-350 dark:text-slate-700 hover:bg-[#FFF5F5]/50";
     const ratio = count / maxVal;
     
-    // Luxury Gold (#C5A880) tone ranges using Tailwind opacity layers
-    if (ratio < 0.2) return "bg-[#C5A880]/15 text-text-primary/70 hover:bg-[#C5A880]/30";
-    if (ratio < 0.4) return "bg-[#C5A880]/35 text-text-primary/80 hover:bg-[#C5A880]/50";
-    if (ratio < 0.7) return "bg-[#C5A880]/60 text-text-primary hover:bg-[#C5A880]/75";
-    return "bg-[#C5A880] text-white font-semibold hover:bg-amber-700/80 shadow-sm"; // Peak hotspot
+    if (ratio < 0.25) return "bg-red-50 text-red-750 hover:bg-red-100/80 dark:bg-red-950/15 dark:text-red-400";
+    if (ratio < 0.5) return "bg-red-100 text-red-900 hover:bg-red-200/80 dark:bg-red-950/40 dark:text-red-300";
+    if (ratio < 0.75) return "bg-red-400 text-white hover:bg-red-500/90 dark:bg-red-700 dark:text-white";
+    return "bg-red-700 text-white font-bold hover:bg-red-800/90 dark:bg-red-600 dark:text-white animate-pulse shadow-sm"; // Peak failure alert
   };
 
   const handleMouseMove = (e: React.MouseEvent, dayIdx: number, hourIdx: number, count: number) => {
@@ -55,61 +56,72 @@ export default function HotspotsHeatmap({ hotspotData }: HotspotsHeatmapProps) {
   };
 
   return (
-    <div className="p-6 rounded-xl glass-card shadow-sm space-y-4">
+    <div className="p-6 rounded-xl glass-card shadow-sm space-y-4 col-span-1 md:col-span-2">
       <div>
-        <h5 className="font-display font-bold text-text-primary text-sm">Missed Call Hotspots</h5>
-        <p className="text-[11px] text-text-secondary mt-0.5">Average missed calls by hour and day of week</p>
+        <h5 className="font-display font-bold text-text-primary text-sm">Hourly Call Failure Matrix (Missed/Abandoned Inbound Counts)</h5>
+        <p className="text-[11px] text-text-secondary mt-0.5">Average missed and abandoned call volume by day and hour</p>
       </div>
 
-      <div className="flex flex-col space-y-2">
-        {/* Heatmap Grid wrapper */}
-        <div className="grid grid-cols-[28px_1fr] gap-1.5 items-center">
-          {/* Empty top-left cell */}
-          <div />
+      <div className="grid grid-cols-[85px_1fr_45px] gap-2 items-center">
+        {/* Main Grid Wrapper */}
+        <div className="col-span-2 flex flex-col space-y-2">
+          <div className="grid grid-cols-[85px_1fr] gap-x-2 gap-y-1.5 items-center">
+            {/* Empty top-left cell */}
+            <div />
 
-          {/* X-axis hours indicators */}
-          <div className="flex justify-between text-[8px] font-mono text-text-secondary/70 px-1 select-none">
-            {hoursLabels.map((lbl, i) => (
-              <span key={i} className="w-6 text-center">{lbl}</span>
+            {/* X-axis hours (6 - 17) */}
+            <div className="grid grid-cols-12 gap-[3px] text-[9px] font-mono font-bold text-text-secondary/70 text-center select-none">
+              {businessHoursRange.map((h) => (
+                <span key={h} className="w-full">{h}</span>
+              ))}
+            </div>
+
+            {/* Matrix rows: Full day name + 12 business hour blocks */}
+            {daysOfWeek.map((day, dayIdx) => (
+              <React.Fragment key={day}>
+                {/* Day label */}
+                <span className="text-[10px] font-sans font-medium text-text-secondary/80 select-none truncate pr-1">
+                  {day}
+                </span>
+
+                {/* 12 Heatmap blocks */}
+                <div className="grid grid-cols-12 gap-[3px]">
+                  {slicedData[dayIdx]?.map((count, index) => {
+                    const hourVal = index + 6; // Hour values 6 to 17
+                    return (
+                      <div
+                        key={index}
+                        className={`aspect-square rounded-[3px] flex items-center justify-center text-[9px] font-mono transition-all cursor-pointer ${getCellColorClass(count)}`}
+                        onMouseMove={(e) => handleMouseMove(e, dayIdx, hourVal, count)}
+                        onMouseLeave={() => setHoveredCell(null)}
+                      >
+                        {count}
+                      </div>
+                    );
+                  })}
+                </div>
+              </React.Fragment>
             ))}
           </div>
 
-          {/* Rows: Day Name + 24 Hour blocks */}
-          {daysOfWeek.map((day, dayIdx) => (
-            <div key={day} className="contents">
-              {/* Day Y-axis Label */}
-              <span className="text-[9px] font-mono font-semibold text-text-secondary select-none">{day}</span>
-              
-              {/* 24 Hour blocks */}
-              <div className="flex gap-[2px]">
-                {hotspotData[dayIdx]?.map((count, hourIdx) => (
-                  <div
-                    key={hourIdx}
-                    className={`flex-1 aspect-square rounded-[3px] transition-all cursor-pointer ${getCellColorClass(count)}`}
-                    onMouseMove={(e) => handleMouseMove(e, dayIdx, hourIdx, count)}
-                    onMouseLeave={() => setHoveredCell(null)}
-                  />
-                ))}
-              </div>
+          {/* X-Axis Title */}
+          <div className="grid grid-cols-[85px_1fr] gap-x-2">
+            <div />
+            <div className="text-center text-[9px] font-sans font-bold text-text-secondary/70 tracking-wider pt-2 uppercase select-none">
+              Hour of Day (24-Hour Format)
             </div>
-          ))}
+          </div>
         </div>
 
-        {/* Legend color key */}
-        <div className="flex justify-between items-center pt-2 text-[9px] font-mono text-text-secondary">
-          <span>0 (Low)</span>
-          <div className="flex gap-[3px] h-3 w-32">
-            <div className="flex-1 bg-gray-100/40 rounded-[2px]" />
-            <div className="flex-1 bg-[#C5A880]/15 rounded-[2px]" />
-            <div className="flex-1 bg-[#C5A880]/35 rounded-[2px]" />
-            <div className="flex-1 bg-[#C5A880]/60 rounded-[2px]" />
-            <div className="flex-1 bg-[#C5A880] rounded-[2px]" />
-          </div>
-          <span>{maxVal}+ (Peak)</span>
+        {/* Right Column: Vertical Color Scale Legend */}
+        <div className="flex flex-col items-center justify-between text-[8px] font-mono font-bold text-text-secondary/70 h-[190px] pl-3 border-l border-slate-200 dark:border-slate-800/80 select-none">
+          <span className="text-center">{maxVal}+</span>
+          <div className="w-2 flex-1 mx-2 my-1.5 bg-gradient-to-t from-red-50 to-red-700 dark:from-red-950/20 dark:to-red-600 rounded-sm" />
+          <span className="text-center">0</span>
         </div>
       </div>
 
-      {/* Floating tooltip */}
+      {/* Tooltip */}
       {hoveredCell && (
         <div 
           className="fixed bg-text-primary text-white text-[9px] font-sans px-2.5 py-1.5 rounded shadow-lg pointer-events-none z-50 whitespace-nowrap border border-white/10"
@@ -119,7 +131,7 @@ export default function HotspotsHeatmap({ hotspotData }: HotspotsHeatmapProps) {
             transform: "translate(-50%, -100%)"
           }}
         >
-          <strong className="text-accent-luxury">{hoveredCell.day} {hoveredCell.hour}</strong>: {hoveredCell.count} missed calls
+          <strong className="text-red-300">{hoveredCell.day} {hoveredCell.hour}</strong>: {hoveredCell.count} missed calls
         </div>
       )}
     </div>

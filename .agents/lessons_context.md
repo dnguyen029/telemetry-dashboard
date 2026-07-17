@@ -1,245 +1,69 @@
 # 🧠 Active lessons learned context (Ground Truth)
 <!-- Method: semantic -->
 
-## 📌 Workspace Hygiene and Legacy Deletion (Date: N/A | Match Score: 0.641)
+## 📌 Test Lesson from IDE Agent (Date: N/A | Match Score: 0.570)
 
-Cleaned up git-ignored root artifacts (implementation_plan.md, task.md, walkthrough.md) and deleted legacy/ and archive/ directories to prevent agents from loading stale/obsolete instructions. Preserved system_status_report.md which is generated dynamically by tool verification scripts.
+This is a test lesson verifying the new manual archive script and automated vector embedding calculation.
 
-## 📌 Walkthrough - Standalone Admin Portal & RingCentral Dashboard (Date: N/A | Match Score: 0.640)
+## 📌 Test Valid Content (Date: N/A | Match Score: 0.567)
 
-### Walkthrough - Standalone Admin Portal & RingCentral Dashboard
+This is a valid conceptual lesson about caching strategies in Redis. It does not contain any state variables.
 
-We have successfully migrated the admin portal overlay modal to a standalone, full-screen `/admin` page route and integrated the live RingCentral Call & Queue Dashboard.
+## 📌 Walkthrough - Extension Realign & Local Gateway Mocking Completed (Date: N/A | Match Score: 0.562)
 
----
+### Walkthrough - Extension Realign & Local Gateway Mocking Completed
 
-#### Changes Completed
-
-##### 1. Backend Route Integration
-- **[NEW] [app/api/ringcentral/route.ts](file:///home/dnguyen029/swarm-agency/app/api/ringcentral/route.ts)**:
-  - Safe OAuth JWT client authorization integration with RingCentral.
-  - Active queue metrics and extension status extraction.
-  - Implementation of a **30-second server-side memory cache** protecting the endpoints from rate limits (429s).
-  - Resilient fallback mode delivering mock/cached metrics if credentials are not configured or are expired.
-
-##### 2. Standalone Page Route
-- **[NEW] [app/admin/page.tsx](file:///home/dnguyen029/swarm-agency/app/admin/page.tsx)**:
-  - Renders a passcode authorization gate (`admin`).
-  - Features sessionStorage state retention to preserve login status across simple browser page refreshes.
-  - Integrates the tab routing switcher, setting the **RingCentral Dashboard** as the default tab.
-  - Complies with the luxury editorial design style guidelines (warm organic backdrop gradients and elegant serif typography).
-
-##### 3. Modular Tab Component Extraction
-To improve maintainability and avoid single-file bloat, the original modal's tabs were extracted into separate component files:
-- **[NEW] [components/admin/LeadsTab.tsx](file:///home/dnguyen029/swarm-agency/components/admin/LeadsTab.tsx)**: Manages client lead list inbounds and fetches `/api/leads`.
-- **[NEW] [components/admin/TelemetryTab.tsx](file:///home/dnguyen029/swarm-agency/components/admin/TelemetryTab.tsx)**: Visualizes Supabase query logs.
-- **[NEW] [components/admin/CatalogTab.tsx](file:///home/dnguyen029/swarm-agency/components/admin/CatalogTab.tsx)**: Mappings of the local product registry.
-- **[NEW] [components/admin/RingCentralTab.tsx](file:///home/dnguyen029/swarm-agency/components/admin/RingCentralTab.tsx)**: The new real-time dashboard displaying call metrics, active queue sizes, active extensions, and custom SVG progress bar analytics for specialist call volume.
-
-##### 4. Routing & Cleanups
-- **[MODIFY] [components/Navbar.tsx](file:///home/dnguyen029/swarm-agency/components/Navbar.tsx)**:
-  - Redirects the "PORTAL ACCESS" link directly to `/admin` instead of toggling the modal.
-  - Decoupled modal state parameters and dynamically checks sessionStorage for authorization status.
-- **[MODIFY] [app/page.tsx](file:///home/dnguyen029/swarm-agency/app/page.tsx)**: Cleaned up dynamic imports, modal layout triggers, and unused component logic.
-- **[MODIFY] [app/competitor-dashboard/page.tsx](file:///home/dnguyen029/swarm-agency/app/competitor-dashboard/page.tsx)**: Removed old Navbar modal props.
-- **[MODIFY] [swarm-agency/.env](file:///home/dnguyen029/swarm-agency/.env)**: Sourced `RINGCENTRAL_` credentials.
+We have successfully completed all modifications as approved. The extension is now realigned with the actual ticket order formats, renders scannable nested cards, and queries a local mock database inside the gateway.
 
 ---
 
-#### Verification Results
+#### 🛠️ Changes Completed
 
-We verified compiling and building the Next.js application within the subfolder. The production build succeeded with zero errors:
+##### 1. Regex & Context Priority Updates
+Modified [content.js](file:///home/dnguyen029/antigravity-project/app_build/agent_assist_extension/content.js) & [background.js](file:///home/dnguyen029/antigravity-project/app_build/agent_assist_extension/background.js):
+-   Expanded `PATTERNS.orderNumber` to match both standard `SO-` prefixes and numerical dash formats (e.g. `01-105404`, `01-11332`) found in real Zendesk communications.
+-   Updated context resolution to prioritize a page-scraped order number over the URL-scoped Ticket ID (e.g., matching the specific order `01-105404` inside ticket `#791103`), allowing direct matching with ERP records.
 
+##### 2. High-Density Structured UI Cards
+Modified [sidepanel.html](file:///home/dnguyen029/antigravity-project/app_build/agent_assist_extension/sidepanel/sidepanel.html) & [sidepanel.js](file:///home/dnguyen029/antigravity-project/app_build/agent_assist_extension/sidepanel/sidepanel.js):
+-   Added CSS layout classes for structured cards: `.erp-card`, `.erp-card-title`, `.sku-item`, `.sku-item-desc`, `.alert-card`, and `.alert-card-title`.
+-   Refactored `renderERPFields(data)` to parse nested JSON responses and render them as separate blocks:
+    1. **Order Info Card**: Order ID, shipment status, and tracking carrier/number.
+    2. **Products Card**: Lists each product SKU and its description.
+    3. **Customer Info Card**: Contact name, phone, email, and address.
+    4. **Claim Concern alert**: Shows alert details when active issues are flagged (e.g., "Previous BC and CT RPs were missing...").
+-   Updated `LOCAL_MOCK_DATA` and `searchMockData(context)` fallback logic inside `sidepanel.js` to match the new nested schema formats.
+
+##### 3. Gateway Local Database Mocking
+Created [mock_db.json](file:///home/dnguyen029/antigravity-project/app_build/erp-gateway/data/mock_db.json):
+-   Seeded a JSON mock database containing structured order and shipping records for Brett Caldwell (`01-105404`), Melaney Bouthillette (`01-11332`), Sarah Jenkins (`AB-67890`), and John Doe (`AB-12345`).
+
+Modified [pages/api/erp/sku.js](file:///home/dnguyen029/antigravity-project/app_build/erp-gateway/pages/api/erp/sku.js) & [pages/api/erp/customer.js](file:///home/dnguyen029/antigravity-project/app_build/erp-gateway/pages/api/erp/customer.js):
+-   Added a route interceptor: if `MOCK_MODE` is enabled or if Business Central environment configs are absent, query matches are fetched directly from `mock_db.json`.
+
+##### 4. Context Invalidation Robustness
+Modified [content.js](file:///home/dnguyen029/antigravity-project/app_build/agent_assist_extension/content.js):
+-   Wrapped storage access (`chrome.storage.local.get`) and messaging triggers (`chrome.runtime.sendMessage`) in runtime checks (`chrome.runtime.id`) and `try...catch` blocks.
+-   This gracefully catches and suppresses `Uncaught Error: Extension context invalidated` errors when the extension is updated/reloaded before the active tab has been refreshed.
+
+---
+
+#### 🧪 Verification & Validation Results
+
+##### 1. Syntax Validation
+Verified syntactical correctness for all JavaScript files using the Node.js compiler:
 ```bash
-npm run build --prefix /home/dnguyen029/swarm-agency
+node -c content.js background.js sidepanel.js sku.js customer.js
 ```text
-**Compilation Output:**
-```text
-✓ Checking validity of types
-✓ Collecting page data
-✓ Generating static pages (16/16)
-✓ Collecting build traces
-✓ Finalizing page optimization
-```text
-All routes compiled successfully.
+-   *Result*: Compilation completed successfully with `exit code 0`.
 
----
+##### 2. Manual Verification Checklist
+1. Open Zendesk and navigate to Brett Caldwell's ticket (`#791103`). Verify that the sidepanel automatically extracts `01-105404` and shows the structured order, products, customer, and alert details.
+2. Open Zendesk and navigate to Melaney Bouthillette's ticket (`#790575`). Verify that the sidepanel extracts `01-11332` and loads the correct shipping statuses.
 
-#### 🎨 Configurator Refactoring, Brand Anonymization & Mobile Optimization
+## 📌 Walkthrough: Schema Alignment & WISMO Mock Data Removal (Date: N/A | Match Score: 0.558)
 
-Both visual customizers have been fully separated, anonymized to generic portfolio names to protect customer identities, and optimized for mobile devices:
-
-1. **Brand Name Substitutions**:
-   - `TK Balloons` -> **`Luxury Balloon Studio`**
-   - `Ariel Bath` / `Ariel Vanity` -> **`Luxury Cabinet Studio`**
-2. **Dedicated Separated Routes**:
-   - **`/configurator`**: Renders the standalone **Luxury Cabinet Studio** using the main website's `Navbar`/`Footer` layout.
-   - **`/configurator/balloons`**: Renders the **Luxury Balloon Studio** layout (the capsule switcher toggles have been completely removed from both headers).
-3. **Mobile Layout Optimizations**:
-   - Visualizer container heights adjusted dynamically (`h-[380px] sm:h-[450px] md:h-[550px]`).
-   - SVG cabinet models and wall mirrors wrapped in a responsive scale factor (`scale-[0.6] xs:scale-[0.72] sm:scale-90 md:scale-100 origin-bottom`) to prevent container overflows on mobile devices.
-   - Expected savings stats grid updated to stack columns vertically on mobile screens (`grid-cols-1 sm:grid-cols-3`).
-
----
-
-#### 📊 Dashboard Visual Tour & Recordings
-
-We recorded the interactive session of the dashboard, displaying the new **Abandoned Call Stats**, the **Hourly Call Distribution Chart**, the **Active Queue Breakdown**, and the **Role-Based Passcodes**:
-
-- **telemetry**: Viewer role (restricts view to the RingCentral dashboard only, hiding admin configuration tabs).
-- **suprememaster**: Admin role (unlocks full access to Leads, Database telemetry logs, Catalog, and Call status).
-
-![Dashboard Verification Walkthrough Recording](/home/dnguyen029/.gemini/antigravity-ide/brain/e8178b26-79b5-49b2-a50a-e4cadf093911/dashboard_update_check_1784223809756.webp)
-
-##### Visual Layout Verification:
-````carousel
-![Inbound KPI cards showing Answered, Missed, and Abandoned stats](/home/dnguyen029/.gemini/antigravity-ide/brain/e8178b26-79b5-49b2-a50a-e4cadf093911/admin_dashboard_initial_1784223816013.png)
-<!-- slide -->
-![Peak load periods bar chart at the bottom](/home/dnguyen029/.gemini/antigravity-ide/brain/e8178b26-79b5-49b2-a50a-e4cadf093911/admin_dashboard_top_1784223820501.png)
-````
-
----
-
-#### 🚀 Deployment Status
-
-All modifications and new components have been committed and successfully pushed to origin on GitHub. Vercel is actively building the deployment.
-
----
-
-#### How to Test Locally
-
-1. Settle in the directory and run the local development server:
-   ```bash
-   npm run dev --prefix /home/dnguyen029/swarm-agency
-   ```text
-2. Navigate to `http://localhost:3000/configurator` to test the Luxury Cabinet Studio.
-3. Navigate to `http://localhost:3000/configurator/balloons` to test the Luxury Balloon Studio.
-4. Verify passcode validation:
-   - Use `telemetry` for restricted Call analytics.
-   - Use `suprememaster` for full admin tab layout.
-
-## 📌 Walkthrough — Refactoring MCP Configurations (Date: N/A | Match Score: 0.638)
-
-### Walkthrough — Refactoring MCP Configurations
-
-This walkthrough summarizes the refactoring steps, implementation details, and verification results for removing the deprecated `supermemory` server and cleaning up legacy stdout filter pipes from all `mcp_config.json` files.
-
----
-
-#### 🛠️ Changes Implemented
-
-##### 1. Refactoring Script
-Created the [patch_mcp_config.py](file:///home/dnguyen029/antigravity-project/patch_mcp_config.py) automation script:
-- Dynamically iterates over the workspace-local, global IDE, global Desktop, and shared system-level `mcp_config.json` files.
-- Removes the deprecated `supermemory` server block from `mcpServers` if present.
-- Sanitizes the `args` parameters of remaining servers (like `supabase` and `google-conversational-agents`) by stripping obsolete ` | grep --line-buffered "^{"` pipes, since output filtering is now performed robustly by `mcp_timeout_wrapper.py`.
-
-##### 2. Configuration Cleanup
-The automation script was executed and successfully updated three of the configuration files:
--   **Workspace-Local Config**: [`mcp_config.json`](file:///home/dnguyen029/antigravity-project/mcp_config.json)
-    -   Cleaned `supabase` arguments.
--   **Global Desktop Config**: [`~/.gemini/antigravity/mcp_config.json`](file:///home/dnguyen029/.gemini/antigravity/mcp_config.json)
-    -   Removed `supermemory` server block.
-    -   Cleaned `supabase` arguments.
--   **Shared Global Config**: [`~/.gemini/config/mcp_config.json`](file:///home/dnguyen029/.gemini/config/mcp_config.json)
-    -   Removed `supermemory` server block.
-    -   Cleaned `google-conversational-agents` and `supabase` arguments.
-
-*(Note: The global IDE config did not contain `supermemory` or legacy pipes and was skipped cleanly.)*
-
----
-
-#### ✅ Verification Results
-
-##### 1. Programmatic Config Content Assertions
-We executed a Python verification command to validate that:
--   The `supermemory` configuration block is not present in any config file.
--   The obsolete `grep` filter pipes are not present in any server `args`.
--   **Result**: **Passed** with 100% compliance.
-
-##### 2. Connection Verification Check
-We executed the pre-flight connection verifier script:
-```bash
-/home/dnguyen029/antigravity-project/.venv/bin/python3 app_build/verify_mcp_connections.py
-```text
--   **Result**: **Success**. All 5 remaining configured MCP servers (`exa`, `supabase`, `toon-mcp`, `context-mcp`, `google-conversational-agents`) successfully established connections (`🟢 CONNECTED`).
--   **Status Report**: The results were compiled into [`system_status_report.md`](file:///home/dnguyen029/antigravity-project/production_artifacts/system_status_report.md).
-
-## 📌 Walkthrough: Deprecate Supermemory and Consolidate Memory under Supabase (Date: N/A | Match Score: 0.637)
-
-### Walkthrough: Deprecate Supermemory and Consolidate Memory under Supabase
-
-We have successfully deprecated the Supermemory MCP server, consolidated all memory operations under Supabase, updated the synchronization hooks, and verified the changes.
-
-#### Changes Made
-
-##### 1. Configuration Cleanup
-- **[mcp_config.json (Local)](file:///home/dnguyen029/antigravity-project/mcp_config.json)**: Removed the `supermemory` block from `mcpServers`.
-- **[mcp_config.json (Global IDE)](file:///home/dnguyen029/.gemini/antigravity-ide/mcp_config.json)**: Removed the `supermemory` block from `mcpServers`.
-- **[verify_mcp_connections.py](file:///home/dnguyen029/antigravity-project/app_build/verify_mcp_connections.py)**: Removed the Supermemory-specific `resources/list` ping verification step.
-
-##### 2. Context Server Adaptation
-- **[context_mcp_server.py](file:///home/dnguyen029/antigravity-project/app_build/tools/context_mcp_server.py)**:
-  - Removed all subprocess handlers, retry loops, and string sanitization rules related to Supermemory.
-  - Refactored `lessons` and `search_memory` to fetch context and ground truth lessons solely from Supabase.
-
-##### 3. Synchronization Hooks Simplification
-- **[archive_lessons.py](file:///home/dnguyen029/antigravity-project/.agents/hooks/archive_lessons.py)**: Removed direct HTTP POST uploads to `api.supermemory.ai`. Simplifies file hash caches to rely on Supabase synchronization success.
-- **[flush_pending_lessons.py](file:///home/dnguyen029/antigravity-project/.agents/hooks/flush_pending_lessons.py)**: Removed the `post_to_supermemory` helper and consolidated retry checks to focus solely on Supabase.
-- **[archive_lesson.py](file:///home/dnguyen029/antigravity-project/app_build/tools/archive_lesson.py)**: Cleaned up queuing logic to skip Supermemory queuing on successful Supabase writes.
-- **[index_codebase.py](file:///home/dnguyen029/antigravity-project/app_build/tools/index_codebase.py)**: Deprecated the REST upload phase to Supermemory.
-
----
-
-#### Verification Results
-
-##### 1. Pre-flight MCP Verification
-- **Command**: `/home/dnguyen029/antigravity-project/.venv/bin/python3 app_build/verify_mcp_connections.py`
-- **Result**: `🟢 CONNECTED` for all 5 remaining servers (`exa`, `supabase`, `toon-mcp`, `context-mcp`, and `google-conversational-agents`).
-
-##### 2. Context Prompt Diagnostic Test
-- **Command**: `/home/dnguyen029/venv/bin/python -c 'import asyncio, sys; sys.path.append("/home/dnguyen029/antigravity-project/app_build/tools"); import context_mcp_server; print(asyncio.run(context_mcp_server.lessons()))'`
-- **Result**: Successfully resolved in under 2 seconds, displaying the ground truth lessons learned from Supabase.
-
-## 📌 Walkthrough: Context Management & Memory Refactoring (Date: N/A | Match Score: 0.636)
-
-### Walkthrough: Context Management & Memory Refactoring
-
-We have successfully refactored and hardened our context management and unified our memory storage to prevent agent amnesia and solve fragmentation issues.
-
-#### Changes Completed
-
-##### 1. Dual-Write Memory Archiver
-- **[MODIFY] [.agents/hooks/archive_lessons.py](file:///home/dnguyen029/antigravity-project/.agents/hooks/archive_lessons.py)**:
-  - Integrated the Supermemory REST API alongside the existing Supabase REST call.
-  - Implemented automatic retry queuing via `pending_lessons.json` under lock protection (`pending_lessons.json.lock`) in case either Supabase or Supermemory dispatches fail.
-
-##### 2. Active Memory Search Tool
-- **[MODIFY] [context_mcp_server.py](file:///home/dnguyen029/antigravity-project/app_build/tools/context_mcp_server.py)**:
-  - Exposed an active MCP tool `@mcp.tool() search_memory()` alongside the passive `@mcp.prompt() lessons()`.
-  - This enables agents to dynamically query the hybrid Supabase vector store and Supermemory profile mid-execution rather than relying solely on static initial context.
-
----
-
-#### Verification Results
-
-##### 1. Hook Verification
-We ran the hook manually:
-```bash
-/home/dnguyen029/antigravity-project/.venv/bin/python3 .agents/hooks/archive_lessons.py
-```text
-- **Result**: Successfully generated embeddings and synced to both Supabase (ID: 1347) and Supermemory.
-
-##### 2. Active Tool Verification
-We tested the new `search_memory` tool using a mock diagnostic script:
-```bash
-/home/dnguyen029/venv/bin/python scratch/test_mcp.py
-```text
-- **Result**: Executed successfully, returning active, matching context from both Supermemory and Supabase.
-
----
-
-#### Walkthrough: Schema Alignment & WISMO Mock Data Removal
+### Walkthrough: Schema Alignment & WISMO Mock Data Removal
 
 We have successfully realigned the lead logging parameter schema from `phone` to `phone_number` across all receptionist app layers, updated the unit tests, and removed the fallback mock shipping response from WISMO lookup routines.
 
@@ -363,4 +187,35 @@ We executed the pre-flight connection verification script to confirm all servers
 ##### 3. Manual Tool Execution Verification
 We created a diagnostic script ([`scratch/test_exa.py`](file:///home/dnguyen029/antigravity-project/scratch/test_exa.py)) to emulate a full `tools/call` JSON-RPC handshake.
 - **Result**: **SUCCESS** (Exa returns live search results cleanly under the updated configuration).
+
+## 📌 Walkthrough - Antigravity IDE Diagnostics Audit (Date: N/A | Match Score: 0.547)
+
+### Walkthrough - Antigravity IDE Diagnostics Audit
+
+An audit has been performed on the language server and renderer diagnostics report to identify, evaluate, and classify all reported warning and error signatures.
+
+---
+
+#### 🔍 Audit Verification Summary
+
+All reported warnings and errors within [Antigravity IDE-diagnostics.txt](file:///home/dnguyen029/antigravity-project/Antigravity%20IDE-diagnostics.txt) were evaluated. They are confirmed to be non-fatal, harmless false-positives fully mitigated by existing environment mechanisms.
+
+| Identified Log Signature | Severity | Diagnostic Assessment & Root Cause | Mitigation / Resolution Status |
+| :--- | :---: | :--- | :--- |
+| `failed to check terminal shell support: internal: internal error` | 🟡 WARNING | Non-fatal artifact from the IDE's Go binary attempting to verify TTY capabilities when launching shells in non-interactive sandbox environments. | **Harmless False-Positive** - Standard execution is unaffected. |
+| `Failed to write server states, eagerly loading all tools: failed to get server directory` | 🟡 WARNING | Occurs during startup because the isolated container restricts desktop-level write permissions for direct caching paths. | **Handled Gracefully** - The IDE successfully falls back to eagerly loading all tool servers dynamically. |
+| `failed to resolve googleAgent config: neither PlanModel nor RequestedModel specified` | 🟡 WARNING | Temporary handshake artifact when the language server is initialized prior to client configuration details being pushed. | **Auto-Resolved** - Resolves automatically as soon as model parameters are synced from the client. |
+
+---
+
+#### 🧪 Forensics & System Health Audit
+
+##### 1. Drift & Trajectory Forensics
+- Checked all system directories for corrupted trajectory (`.pb`) files.
+- All conversation files and implicit schemas are intact (none are truncated or zero bytes).
+- Analyzed `transcript.jsonl` step execution history. All interactions are confirmed to be linear, sequential, and free of runaway loops or context amnesia.
+
+##### 2. MCP Connection Check
+- Run command: `/home/dnguyen029/antigravity-project/.venv/bin/python3 app_build/verify_mcp_connections.py`
+- **Result**: **Passed**. All configured tool servers (Exa, Supabase, Toon-mcp, Context-mcp, and Google Conversational Agents) are verified as online and connected.
 

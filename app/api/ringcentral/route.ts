@@ -264,6 +264,21 @@ export async function GET(request: Request) {
     const capacitySeconds = Math.max(1, enabledUserCount) * shiftSeconds;
     const occupancyRate = Math.min(98, Math.round((totalTalkTime / capacitySeconds) * 100));
 
+    const missedCallsList = logs
+      .filter((l: any) => 
+        missedResultStatuses.includes(l.result) || l.action === "Missed"
+      )
+      .map((l: any) => ({
+        id: l.id || `missed-${Math.random().toString(36).substr(2, 9)}`,
+        startTime: l.startTime,
+        fromName: l.from?.name || "Unknown",
+        fromNumber: l.from?.phoneNumber || "Unknown",
+        toName: l.to?.name || "Support",
+        toNumber: l.to?.extensionNumber || "Support",
+        duration: l.duration || 0,
+        result: l.result || "Missed"
+      }));
+
     const livePayload = buildAnalyticsPayload(
       totalCallsToday,
       answeredCalls,
@@ -278,7 +293,8 @@ export async function GET(request: Request) {
       hourlyMissed,
       "RingCentral Live API",
       undefined,
-      occupancyRate
+      occupancyRate,
+      missedCallsList
     );
 
     // 3. Upsert Cache to Supabase
@@ -339,6 +355,34 @@ function getMockData(statusMessage: string) {
     { id: "110", extensionNumber: "110", name: "Mega Castillo", type: "User", status: "Enabled" }
   ];
 
+  const firstNames = ["James", "Mary", "John", "Patricia", "Robert", "Jennifer", "Michael", "Linda", "William", "Elizabeth", "David", "Barbara"];
+  const lastNames = ["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Rodriguez", "Martinez"];
+  const resultTypes = ["No Answer", "Sent to Voicemail", "Missed", "Declined"];
+  
+  const simulatedMissedList = Array.from({ length: missed }, (_, i) => {
+    const fName = firstNames[Math.floor(Math.random() * firstNames.length)];
+    const lName = lastNames[Math.floor(Math.random() * lastNames.length)];
+    const areaCode = 206 + Math.floor(Math.random() * 20);
+    const prefix = 100 + Math.floor(Math.random() * 900);
+    const line = 1000 + Math.floor(Math.random() * 9000);
+    
+    const hour = 8 + Math.floor(Math.random() * 10);
+    const minute = Math.floor(Math.random() * 60);
+    const today = new Date();
+    today.setHours(hour, minute, 0, 0);
+
+    return {
+      id: `mock-missed-${i}-${Math.random().toString(36).substr(2, 5)}`,
+      startTime: today.toISOString(),
+      fromName: `${fName} ${lName}`,
+      fromNumber: `+1 (${areaCode}) ${prefix}-${line}`,
+      toName: Math.random() > 0.5 ? "Specialist Queue (Queue 8)" : "Support Line A",
+      toNumber: Math.random() > 0.5 ? "8" : "3",
+      duration: 10 + Math.floor(Math.random() * 45),
+      result: resultTypes[Math.floor(Math.random() * resultTypes.length)]
+    };
+  }).sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
+
   return buildAnalyticsPayload(
     baseCalls,
     answered,
@@ -352,7 +396,9 @@ function getMockData(statusMessage: string) {
     hourlyAnswered,
     hourlyMissed,
     "Simulated Telemetry Metrics",
-    statusMessage
+    statusMessage,
+    undefined,
+    simulatedMissedList
   );
 }
 
@@ -370,7 +416,8 @@ function buildAnalyticsPayload(
   hourlyMissed: number[],
   source: string,
   info?: string,
-  agentOccupancy?: number
+  agentOccupancy?: number,
+  missedCallsList: any[] = []
 ) {
   const calculateRates = (calls: number, ans: number, miss: number, aban: number) => {
     const denom = calls || 1;
@@ -549,6 +596,7 @@ function buildAnalyticsPayload(
     status: source === "RingCentral Live API" ? "online" : "fallback",
     integrationSource: source,
     info,
+    missedCallsList,
     metrics: {
       totalCallsToday,
       answeredCalls,

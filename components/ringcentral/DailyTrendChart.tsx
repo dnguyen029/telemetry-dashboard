@@ -99,6 +99,47 @@ export default function DailyTrendChart({ dailyTrends }: DailyTrendChartProps) {
           <path d={getBezierPath(answeredPoints)} fill="none" stroke="#10B981" strokeWidth="1.75" strokeLinecap="round" />
           <path d={getBezierPath(missedPoints)} fill="none" stroke="#EF4444" strokeWidth="1.25" strokeLinecap="round" strokeDasharray="3,3" />
 
+          {/* Persistent Data Labels */}
+          {dailyTrends.map((d, idx) => {
+            const inboundY = yScale(d.inbound);
+            const answeredY = yScale(d.answered);
+            const missedY = yScale(d.missed);
+            
+            return (
+              <g key={`persistent-labels-${idx}`} className="font-mono text-[9px] font-bold select-none pointer-events-none">
+                {/* Inbound (Gold) label above point */}
+                <text
+                  x={xScale(idx)}
+                  y={inboundY - 8}
+                  textAnchor="middle"
+                  className="fill-amber-600/90 dark:fill-amber-400/95 font-semibold"
+                >
+                  {d.inbound}
+                </text>
+
+                {/* Answered (Green) label below point */}
+                <text
+                  x={xScale(idx)}
+                  y={answeredY + 12}
+                  textAnchor="middle"
+                  className="fill-emerald-600/90 dark:fill-emerald-400/95 font-semibold"
+                >
+                  {d.answered}
+                </text>
+
+                {/* Missed (Red) label above point */}
+                <text
+                  x={xScale(idx)}
+                  y={missedY - 8}
+                  textAnchor="middle"
+                  className="fill-red-500/90 dark:fill-red-400/95 font-semibold"
+                >
+                  {d.missed}
+                </text>
+              </g>
+            );
+          })}
+
           {/* Hover interactive bars */}
           {dailyTrends.map((d, idx) => (
             <rect
