@@ -23,7 +23,7 @@ export default function BusinessHoursChart({ businessHoursData }: BusinessHoursC
   const getPercentOfTotal = (val: number) => Math.round((val / totalInbound) * 100);
 
   return (
-    <div className="p-6 rounded-xl bg-white/60 border border-gray-200/50 shadow-sm backdrop-blur-md space-y-5">
+    <div className="p-6 rounded-xl glass-card shadow-sm space-y-5">
       <div>
         <h5 className="font-display font-bold text-text-primary text-sm">Business Hours vs After-Hours</h5>
         <p className="text-[11px] text-text-secondary mt-0.5">Performance comparison by time frames</p>

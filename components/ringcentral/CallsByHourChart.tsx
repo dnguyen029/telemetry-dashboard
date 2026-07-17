@@ -71,7 +71,7 @@ export default function CallsByHourChart({ hourlyTrends }: CallsByHourChartProps
   const xTicksIndices = [0, 4, 8, 12, 16, 20, 23];
 
   return (
-    <div className="p-6 rounded-xl bg-white/60 border border-gray-200/50 shadow-sm backdrop-blur-md space-y-4">
+    <div className="p-6 rounded-xl glass-card shadow-sm space-y-4">
       <div className="flex justify-between items-start">
         <div>
           <h5 className="font-display font-bold text-text-primary text-sm">Calls by Hour</h5>

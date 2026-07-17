@@ -49,7 +49,7 @@ export default function DailyTrendChart({ dailyTrends }: DailyTrendChartProps) {
   const yTicks = [0, Math.round(maxVal / 2), maxVal];
 
   return (
-    <div className="p-6 rounded-xl bg-white/60 border border-gray-200/50 shadow-sm backdrop-blur-md space-y-4">
+    <div className="p-6 rounded-xl glass-card shadow-sm space-y-4">
       <div className="flex justify-between items-center">
         <div>
           <h5 className="font-display font-bold text-text-primary text-sm">Daily Volume Trend</h5>

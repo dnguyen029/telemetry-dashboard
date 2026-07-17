@@ -55,7 +55,7 @@ export default function HotspotsHeatmap({ hotspotData }: HotspotsHeatmapProps) {
   };
 
   return (
-    <div className="p-6 rounded-xl bg-white/60 border border-gray-200/50 shadow-sm backdrop-blur-md space-y-4">
+    <div className="p-6 rounded-xl glass-card shadow-sm space-y-4">
       <div>
         <h5 className="font-display font-bold text-text-primary text-sm">Missed Call Hotspots</h5>
         <p className="text-[11px] text-text-secondary mt-0.5">Average missed calls by hour and day of week</p>
