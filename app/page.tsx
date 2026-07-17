@@ -89,6 +89,12 @@ export default function DashboardSuite() {
     } else if (window.matchMedia("(prefers-color-scheme: light)").matches) {
       setTheme("light");
     }
+
+    const savedCollapsed = localStorage.getItem("sidebar_collapsed");
+    if (savedCollapsed !== null) {
+      setIsSidebarCollapsed(savedCollapsed === "true");
+    }
+
     setMounted(true);
   }, []);
 
@@ -106,6 +112,12 @@ export default function DashboardSuite() {
   }, [theme, mounted]);
 
   const toggleTheme = () => setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+
+  const handleToggleSidebar = () => {
+    const nextState = !isSidebarCollapsed;
+    setIsSidebarCollapsed(nextState);
+    localStorage.setItem("sidebar_collapsed", String(nextState));
+  };
 
   // ==========================================
   // RINGCENTRAL TELEMETRY STATE & LOGIC
@@ -506,7 +518,7 @@ export default function DashboardSuite() {
 
           {/* Collapse Trigger arrow */}
           <button
-            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            onClick={handleToggleSidebar}
             className={`w-full flex items-center gap-3 px-3.5 py-2 text-xs font-mono text-slate-500 hover:text-slate-850 dark:text-slate-400 dark:hover:text-slate-200 transition-colors cursor-pointer ${
               isSidebarCollapsed ? "justify-center px-0" : ""
             }`}
@@ -752,18 +764,22 @@ export default function DashboardSuite() {
                 </div>
               )}
 
-              {/* Charts Grid (3 Columns) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Row 1: Charts (2 Columns) */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {rcData?.hourlyTrends && (
                   <CallsByHourChart hourlyTrends={rcData.hourlyTrends} />
-                )}
-                {rcData?.hotspotData && (
-                  <HotspotsHeatmap hotspotData={rcData.hotspotData} />
                 )}
                 {rcData?.businessHoursData && (
                   <BusinessHoursChart businessHoursData={rcData.businessHoursData} />
                 )}
               </div>
+
+              {/* Row 2: Heatmap Matrix (Full Width) */}
+              {rcData?.hotspotData && (
+                <div className="w-full">
+                  <HotspotsHeatmap hotspotData={rcData.hotspotData} />
+                </div>
+              )}
 
               {/* Bottom Row: Daily Volume Trend (Full Width) */}
               {rcData?.dailyTrends && (

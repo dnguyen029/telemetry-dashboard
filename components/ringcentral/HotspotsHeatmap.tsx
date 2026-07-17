@@ -56,7 +56,7 @@ export default function HotspotsHeatmap({ hotspotData }: HotspotsHeatmapProps) {
   };
 
   return (
-    <div className="p-6 rounded-xl glass-card shadow-sm space-y-4 col-span-1 md:col-span-2">
+    <div className="p-6 rounded-xl glass-card shadow-sm space-y-4 w-full">
       <div>
         <h5 className="font-display font-bold text-text-primary text-sm">Hourly Call Failure Matrix (Missed/Abandoned Inbound Counts)</h5>
         <p className="text-[11px] text-text-secondary mt-0.5">Average missed and abandoned call volume by day and hour</p>
