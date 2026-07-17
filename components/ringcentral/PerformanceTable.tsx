@@ -58,17 +58,35 @@ interface PerformanceTableProps {
   comparisonData: any;
   sparklines: any;
   period: "DoD" | "WoW" | "MoM" | "QoQ";
+  setPeriod: (p: "DoD" | "WoW" | "MoM" | "QoQ") => void;
 }
 
-export default function PerformanceTable({ comparisonData, sparklines, period }: PerformanceTableProps) {
+export default function PerformanceTable({ comparisonData, sparklines, period, setPeriod }: PerformanceTableProps) {
   const activeData = comparisonData[period];
   if (!activeData) return null;
 
   return (
     <div className="p-6 rounded-xl glass-card shadow-sm space-y-4">
-      <div>
-        <h5 className="font-display font-bold text-text-primary text-sm">Call Performance Comparison</h5>
-        <p className="text-[11px] text-text-secondary mt-0.5">Statistical metrics comparing current vs historical period</p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-gray-250/20 pb-3.5">
+        <div>
+          <h5 className="font-display font-bold text-text-primary text-sm">Call Performance Comparison</h5>
+          <p className="text-[11px] text-text-secondary mt-0.5">Statistical metrics comparing current vs historical period</p>
+        </div>
+        <div className="flex bg-slate-100 dark:bg-slate-900 p-0.5 rounded-lg border border-slate-200 dark:border-slate-800 shrink-0">
+          {(["DoD", "WoW", "MoM", "QoQ"] as const).map((p) => (
+            <button
+              key={p}
+              onClick={() => setPeriod(p)}
+              className={`px-2.5 py-1 text-[10px] font-mono font-medium rounded-md transition-all cursor-pointer ${
+                period === p
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-slate-550 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
+              }`}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="overflow-x-auto">

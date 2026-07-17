@@ -816,6 +816,15 @@ export default function DashboardSuite() {
                       <DailyTrendChart dailyTrends={rcData.dailyTrends} />
                     )}
                   </div>
+
+                  {rcData?.comparisonData && rcData?.sparklines && (
+                    <PerformanceTable
+                      comparisonData={rcData.comparisonData}
+                      sparklines={rcData.sparklines}
+                      period={period}
+                      setPeriod={setPeriod}
+                    />
+                  )}
                 </div>
 
                 {/* Performance sidebar */}
@@ -869,7 +878,15 @@ export default function DashboardSuite() {
                             <div key={ext.id} className="py-2.5 flex justify-between items-center text-xs font-mono">
                               <div className="space-y-0.5">
                                 <span className="text-slate-700 dark:text-slate-300 block font-medium font-sans">{ext.name}</span>
-                                <span className="text-[10px] text-slate-450 dark:text-slate-500">Ext {ext.extensionNumber} • {ext.type}</span>
+                                <div className="flex items-center gap-1.5 text-[10px] text-slate-450 dark:text-slate-500">
+                                  <span>Ext {ext.extensionNumber} • {ext.type}</span>
+                                  {ext.occupancy !== undefined && ext.type === "User" && (
+                                    <>
+                                      <span>•</span>
+                                      <span className="text-emerald-500 font-semibold">{ext.occupancy}% Occupancy</span>
+                                    </>
+                                  )}
+                                </div>
                               </div>
                               <Badge className={
                                 ext.status === "Closed" 

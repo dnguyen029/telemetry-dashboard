@@ -223,20 +223,6 @@ export async function GET(request: Request) {
       }
     });
 
-    const extensions = recordsList.map((r: any) => ({
-      id: r.id,
-      extensionNumber: r.extensionNumber,
-      name: r.name,
-      type: r.type,
-      status: r.status
-    })).slice(0, 8);
-
-    // Sum of Talk Time (duration of answered calls)
-    const answeredLogs = logs.filter((l: any) => 
-      !missedResultStatuses.includes(l.result) && !abandonedResultStatuses.includes(l.result)
-    );
-    const totalTalkTime = answeredLogs.reduce((acc: number, log: any) => acc + (log.duration || 0), 0);
-
     // Calculate Dynamic Capacity Window
     let shiftSeconds = 36000; // 10 hours for past days
     if (isToday) {
@@ -246,6 +232,35 @@ export async function GET(request: Request) {
       const elapsed = (now.getTime() - start.getTime()) / 1000;
       shiftSeconds = Math.max(3600, Math.min(36000, elapsed)); // clamp between 1 and 10 hours
     }
+
+    const extensions = recordsList.map((r: any) => {
+      // Find answered calls for this extension
+      const agentLogs = logs.filter((l: any) => {
+        const isAnswered = !missedResultStatuses.includes(l.result) && !abandonedResultStatuses.includes(l.result);
+        if (!isAnswered) return false;
+        const matchTo = l.to?.extensionNumber === r.extensionNumber;
+        const matchFrom = l.from?.extensionNumber === r.extensionNumber;
+        return matchTo || matchFrom;
+      });
+      const agentTalkTime = agentLogs.reduce((acc: number, log: any) => acc + (log.duration || 0), 0);
+      const agentOccupancy = Math.min(100, Math.round((agentTalkTime / shiftSeconds) * 100));
+
+      return {
+        id: r.id,
+        extensionNumber: r.extensionNumber,
+        name: r.name,
+        type: r.type,
+        status: r.status,
+        occupancy: agentOccupancy
+      };
+    }).slice(0, 8);
+
+    // Sum of Talk Time (duration of answered calls)
+    const answeredLogs = logs.filter((l: any) => 
+      !missedResultStatuses.includes(l.result) && !abandonedResultStatuses.includes(l.result)
+    );
+    const totalTalkTime = answeredLogs.reduce((acc: number, log: any) => acc + (log.duration || 0), 0);
+
     const capacitySeconds = Math.max(1, enabledUserCount) * shiftSeconds;
     const occupancyRate = Math.min(98, Math.round((totalTalkTime / capacitySeconds) * 100));
 
