@@ -53,7 +53,7 @@ export default function DailyTrendChart({ dailyTrends }: DailyTrendChartProps) {
       <div className="flex justify-between items-center">
         <div>
           <h5 className="font-display font-bold text-text-primary text-sm">Daily Volume Trend</h5>
-          <p className="text-[11px] text-text-secondary mt-0.5">Inbound, answered, and missed call trends over the past 7 days</p>
+          <p className="text-xs text-text-secondary mt-0.5">Inbound, answered, and missed call trends over the past 7 days</p>
         </div>
         <div className="flex items-center gap-3 text-[10px] font-mono text-text-secondary">
           <div className="flex items-center gap-1">
@@ -72,7 +72,7 @@ export default function DailyTrendChart({ dailyTrends }: DailyTrendChartProps) {
       </div>
 
       <div className="relative w-full aspect-[4/1]">
-        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible font-mono text-[8px] select-none">
+        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible font-mono text-[11px] select-none">
           {/* Grid lines */}
           {yTicks.map((tick, i) => (
             <line

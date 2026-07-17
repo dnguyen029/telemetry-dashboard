@@ -75,7 +75,7 @@ export default function CallsByHourChart({ hourlyTrends }: CallsByHourChartProps
       <div className="flex justify-between items-start">
         <div>
           <h5 className="font-display font-bold text-text-primary text-sm">Calls by Hour</h5>
-          <p className="text-[11px] text-text-secondary mt-0.5">Real-time call volume patterns comparing trends</p>
+          <p className="text-xs text-text-secondary mt-0.5">Real-time call volume patterns comparing trends</p>
         </div>
         <div className="flex items-center gap-3 text-[10px] font-mono text-text-secondary">
           <div className="flex items-center gap-1">
@@ -94,7 +94,7 @@ export default function CallsByHourChart({ hourlyTrends }: CallsByHourChartProps
       </div>
 
       <div className="relative w-full aspect-[5/2]">
-        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible font-mono text-[8px] select-none">
+        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible font-mono text-[11px] select-none">
           {/* Gradients */}
           <defs>
             <linearGradient id="inboundGrad" x1="0" y1="0" x2="0" y2="1">
