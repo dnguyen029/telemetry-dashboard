@@ -1,0 +1,47 @@
+12:46:13.045 Running build in Washington, D.C., USA (East) – iad1
+12:46:13.046 Build machine configuration: 2 cores, 8 GB
+12:46:13.155 Cloning github.com/dnguyen029/telemetry-dashboard (Branch: main, Commit: 6ac3f2f)
+12:46:13.156 Previous build caches not available.
+12:46:13.423 Cloning completed: 267.000ms
+12:46:13.740 Running "vercel build"
+12:46:13.758 Vercel CLI 56.2.0
+12:46:14.157 Installing dependencies...
+12:46:19.696 npm warn deprecated node-domexception@1.0.0: Use your platform's native DOMException instead
+12:46:29.643 
+12:46:29.644 added 648 packages in 15s
+12:46:29.644 
+12:46:29.644 241 packages are looking for funding
+12:46:29.644   run `npm fund` for details
+12:46:29.729 Detected Next.js version: 16.2.10
+12:46:29.737 Running "npm run build"
+12:46:29.837 
+12:46:29.837 > telemetry-dashboard@0.1.0 build
+12:46:29.838 > next build
+12:46:29.838 
+12:46:30.338   Applying modifyConfig from Vercel
+12:46:30.343 Attention: Next.js now collects completely anonymous telemetry regarding usage.
+12:46:30.343 This information is used to shape Next.js' roadmap and prioritize features.
+12:46:30.344 You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+12:46:30.344 https://nextjs.org/telemetry
+12:46:30.345 
+12:46:30.362 ▲ Next.js 16.2.10 (Turbopack)
+12:46:30.363 
+12:46:30.393   Creating an optimized production build ...
+12:46:38.923 ✓ Compiled successfully in 8.2s
+12:46:38.926   Running TypeScript ...
+12:46:43.966   Finished TypeScript in 5.0s ...
+12:46:43.971   Collecting page data using 1 worker ...
+12:46:44.303 Error: supabaseUrl is required.
+12:46:44.303     at module evaluation (.next/server/chunks/[root-of-the-server]__07dl2yn._.js:1:1162)
+12:46:44.303     at instantiateModule (.next/server/chunks/[turbopack]_runtime.js:853:9)
+12:46:44.304     at instantiateRuntimeModule (.next/server/chunks/[turbopack]_runtime.js:882:12)
+12:46:44.304     at getOrInstantiateRuntimeModule (.next/server/chunks/[turbopack]_runtime.js:895:12)
+12:46:44.304     at Object.m (.next/server/chunks/[turbopack]_runtime.js:898:18)
+12:46:44.304     at Object.<anonymous> (.next/server/app/api/competitor-scan/cache/route.js:6:3)
+12:46:44.808 
+12:46:44.808 > Build error occurred
+12:46:44.810 Error: Failed to collect page data for /api/competitor-scan/cache
+12:46:44.811     at ignore-listed frames {
+12:46:44.811   type: 'Error'
+12:46:44.811 }
+12:46:44.853 Error: Command "npm run build" exited with 1

@@ -57,7 +57,7 @@ function MetricRow({ label, cur, prev, change, pct, sparkData, isRate = false }:
 interface PerformanceTableProps {
   comparisonData: any;
   sparklines: any;
-  period: "DoD" | "MoM" | "QoQ";
+  period: "DoD" | "WoW" | "MoM" | "QoQ";
 }
 
 export default function PerformanceTable({ comparisonData, sparklines, period }: PerformanceTableProps) {
