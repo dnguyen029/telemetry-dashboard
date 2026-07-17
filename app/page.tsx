@@ -73,7 +73,7 @@ const normalizeProductPrices = (prod: any) => {
 
 export default function DashboardSuite() {
   // Global Tab state
-  const [activeSuiteTab, setActiveSuiteTab] = useState<string>("overview");
+  const [activeSuiteTab, setActiveSuiteTab] = useState<string>("telemetry");
   
   // Theme and Responsive Menu states
   const [theme, setTheme] = useState<"light" | "dark">("dark");
@@ -430,7 +430,6 @@ export default function DashboardSuite() {
           {/* Navigation Links */}
           <nav className="space-y-1">
             {[
-              { id: "overview", label: "Overview", icon: LayoutDashboard },
               { id: "telemetry", label: "Call & Email Volume", icon: Phone },
               { id: "staffing", label: "Staffing", icon: Users },
               { id: "performance", label: "Performance", icon: TrendingUp },
@@ -551,9 +550,12 @@ export default function DashboardSuite() {
                 </div>
                 <nav className="space-y-1">
                   {[
-                    { id: "overview", label: "Overview Hub", icon: LayoutDashboard },
-                    { id: "telemetry", label: "Call Analytics", icon: Phone },
-                    { id: "competitor", label: "MAP & Competitors", icon: BarChart2 }
+                    { id: "telemetry", label: "Call & Email Volume", icon: Phone },
+                    { id: "staffing", label: "Staffing", icon: Users },
+                    { id: "performance", label: "Performance", icon: TrendingUp },
+                    { id: "quality", label: "Quality", icon: Shield },
+                    { id: "reports", label: "Reports", icon: FileText },
+                    { id: "competitor", label: "Data", icon: Database }
                   ].map((item) => {
                     const Icon = item.icon;
                     const isActive = activeSuiteTab === item.id;
@@ -598,133 +600,7 @@ export default function DashboardSuite() {
 
         {/* MAIN BODY CONTENT */}
         <main className="flex-1 max-w-7xl w-full mx-auto p-6 md:p-8 space-y-6">
-          
-          {/* ==========================================
-              VIEW: UNIFIED OVERVIEW HUB
-              ========================================== */}
-          {activeSuiteTab === "overview" && (
-            <div className="space-y-6 animate-in fade-in duration-300">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 dark:border-slate-900 pb-5">
-                <div className="space-y-1">
-                  <h2 className="text-xl font-bold font-heading text-slate-800 dark:text-white flex items-center gap-2.5">
-                    Operations Control Center
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-450 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                    </span>
-                  </h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Unified real-time tracking for customer call telemetry and price compliance.
-                  </p>
-                </div>
-              </div>
 
-              {/* Overview KPI Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <Card className="glass-card shadow-sm border-slate-200 dark:border-slate-900 glow-indigo">
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-xs font-mono font-semibold tracking-wider text-slate-500 dark:text-slate-400 uppercase">Today's Calls</CardTitle>
-                    <Phone className="w-4 h-4 text-indigo-500" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold font-mono text-slate-800 dark:text-white">
-                      {rcData?.metrics?.totalCallsToday ?? "0"}
-                    </div>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 flex gap-2">
-                      <span className="text-emerald-500 font-semibold">{rcData?.metrics?.answeredCalls ?? 0} Ans</span>
-                      <span>•</span>
-                      <span className="text-red-500 font-semibold">{rcData?.metrics?.missedCalls ?? 0} Miss</span>
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="glass-card shadow-sm border-slate-200 dark:border-slate-900 glow-amber">
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-xs font-mono font-semibold tracking-wider text-slate-550 dark:text-slate-400 uppercase">MAP Violations</CardTitle>
-                    <AlertTriangle className="w-4 h-4 text-amber-500" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className={`text-3xl font-bold font-mono ${activeViolations > 0 ? "text-amber-500" : "text-slate-800 dark:text-white"}`}>
-                      {activeViolations}
-                    </div>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">Out of {totalMonitored} monitored products</p>
-                  </CardContent>
-                </Card>
-
-                <Card className="glass-card shadow-sm border-slate-200 dark:border-slate-900 glow-emerald">
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-xs font-mono font-semibold tracking-wider text-slate-550 dark:text-slate-400 uppercase">Compliance Score</CardTitle>
-                    <Percent className="w-4 h-4 text-emerald-500" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold font-mono text-emerald-500">
-                      {complianceRate}%
-                    </div>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">Overall pricing compliance threshold</p>
-                  </CardContent>
-                </Card>
-
-                <Card className="glass-card shadow-sm border-slate-200 dark:border-slate-900 glow-blue">
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-xs font-mono font-semibold tracking-wider text-slate-550 dark:text-slate-400 uppercase">Avg Wait Time</CardTitle>
-                    <Clock className="w-4 h-4 text-blue-500" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold font-mono text-slate-800 dark:text-white">
-                      {rcData?.metrics?.avgWaitSeconds ?? "0"}s
-                    </div>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">Target SLA threshold: &lt; 60 seconds</p>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Split layout: Call Trend & active queues */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <Card className="lg:col-span-2 glass-card border-slate-200 dark:border-slate-900 p-6 space-y-4 glow-indigo">
-                  <div className="flex justify-between items-center">
-                    <h3 className="font-bold text-sm text-slate-800 dark:text-white font-heading">Call Volume Hourly Trend</h3>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => setActiveSuiteTab("telemetry")}
-                      className="text-xs text-indigo-500 dark:text-indigo-400 hover:bg-indigo-550/10"
-                    >
-                      View Details <ChevronRight className="w-3.5 h-3.5 ml-1" />
-                    </Button>
-                  </div>
-                  <div className="h-[200px]">
-                    {rcData?.hourlyTrends && <CallsByHourChart hourlyTrends={rcData.hourlyTrends} />}
-                  </div>
-                </Card>
-
-                <Card className="glass-card border-slate-200 dark:border-slate-900 glow-amber flex flex-col justify-between">
-                  <CardHeader>
-                    <div className="flex justify-between items-center">
-                      <CardTitle className="text-sm font-bold text-slate-800 dark:text-white font-heading">Active Queue Monitoring</CardTitle>
-                      <span className="flex h-1.5 w-1.5 relative">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-450 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-500"></span>
-                      </span>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="flex-1 space-y-3 font-mono text-xs">
-                    {rcData?.activeQueues && rcData.activeQueues.length > 0 ? (
-                      rcData.activeQueues.map((q: any, idx: number) => (
-                        <div key={idx} className="flex justify-between items-center py-1 border-b border-slate-200 dark:border-slate-900 last:border-b-0">
-                          <span className="text-slate-500 dark:text-slate-400 truncate max-w-[130px]">{q.name.split(" (")[0]}:</span>
-                          <Badge className="bg-amber-500/10 border border-amber-500/20 text-amber-500 text-[10px] font-mono px-2 py-0.5">
-                            {q.count} Waiting
-                          </Badge>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-slate-550 dark:text-slate-400">All queues clear</p>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          )}
 
           {/* ==========================================
               VIEW: RINGCENTRAL TELEMETRY
