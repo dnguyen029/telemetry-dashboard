@@ -10,5 +10,9 @@
   {
     "topic": "Heatmap Cell Label Contrast",
     "lesson": "When overlaying text numbers inside a density heatmap grid, dynamically calculate text contrast styling (light text on dark backgrounds, dark text on light backgrounds) based on the cell's normalized value ratio relative to the peak value."
+  },
+  {
+    "topic": "Filtering Call Queue Logs",
+    "lesson": "When building call metrics for support queue dashboards using account-level logs, query with direction=Inbound and filter the destination fields against known agent User extensions to exclude direct extension dials (DIDs), internal user calls, and outbound dials from the queue telemetry."
   }
 ]

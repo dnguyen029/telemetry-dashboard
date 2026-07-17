@@ -148,7 +148,7 @@ export async function GET(request: Request) {
     const perPage = 1000;
 
     while (hasMore) {
-      const logUrl = `${server}/restapi/v1.0/account/~/call-log?dateFrom=${dateFrom}&dateTo=${dateTo}&view=Simple&perPage=${perPage}&page=${page}`;
+      const logUrl = `${server}/restapi/v1.0/account/~/call-log?dateFrom=${dateFrom}&dateTo=${dateTo}&view=Simple&direction=Inbound&perPage=${perPage}&page=${page}`;
       const logRes = await fetch(logUrl, {
         headers: {
           "Authorization": `Bearer ${accessToken}`,
@@ -172,7 +172,19 @@ export async function GET(request: Request) {
       }
     }
 
-    let totalCallsToday = logs.length;
+    // Filter logs for Inbound Queue/Support Calls only (exclude direct calls to agent personal extensions)
+    const userNames = recordsList.filter((r: any) => r.type === "User").map((r: any) => r.name);
+    const userExts = recordsList.filter((r: any) => r.type === "User").map((r: any) => r.extensionNumber);
+
+    const queueLogs = logs.filter((l: any) => {
+      // 1. Double check direction is Inbound
+      if (l.direction !== "Inbound") return false;
+      // 2. Must not be direct to an agent
+      const isDirectToAgent = userNames.includes(l.to?.name) || userExts.includes(l.to?.extensionNumber);
+      return !isDirectToAgent;
+    });
+
+    let totalCallsToday = queueLogs.length;
     let missedCalls = 0;
     let answeredCalls = 0;
     let avgWaitSeconds = 48;
@@ -184,18 +196,18 @@ export async function GET(request: Request) {
     const missedResultStatuses = ["Missed", "No Answer", "Not Answered", "Declined", "Sent to Voicemail"];
     const abandonedResultStatuses = ["Abandoned", "Hang Up", "Disconnected"];
 
-    missedCalls = logs.filter((l: any) => 
+    missedCalls = queueLogs.filter((l: any) => 
       missedResultStatuses.includes(l.result) || l.action === "Missed"
     ).length;
 
-    abandonedCalls = logs.filter((l: any) => 
+    abandonedCalls = queueLogs.filter((l: any) => 
       abandonedResultStatuses.includes(l.result)
     ).length;
 
     answeredCalls = Math.max(0, totalCallsToday - missedCalls - abandonedCalls);
     
     // Estimate wait time: missed/abandoned duration is exact wait time, answered calls have an average wait time of ~20s
-    const waitTimes = logs.map((l: any) => {
+    const waitTimes = queueLogs.map((l: any) => {
       const isAnswered = !missedResultStatuses.includes(l.result) && !abandonedResultStatuses.includes(l.result);
       if (isAnswered) {
         return 15 + ((l.duration || 0) % 20); // Simulated wait time between 15-35s
@@ -207,7 +219,7 @@ export async function GET(request: Request) {
     }
 
     // Populate hourly volume from live startTimes
-    logs.forEach((log: any) => {
+    queueLogs.forEach((log: any) => {
       if (log.startTime) {
         const hour = new Date(log.startTime).getHours();
         if (hour >= 0 && hour < 24) {
@@ -264,7 +276,7 @@ export async function GET(request: Request) {
     const capacitySeconds = Math.max(1, enabledUserCount) * shiftSeconds;
     const occupancyRate = Math.min(98, Math.round((totalTalkTime / capacitySeconds) * 100));
 
-    const missedCallsList = logs
+    const missedCallsList = queueLogs
       .filter((l: any) => 
         missedResultStatuses.includes(l.result) || l.action === "Missed"
       )
