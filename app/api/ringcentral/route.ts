@@ -227,29 +227,34 @@ export async function GET(request: Request) {
     let hourlyAnswered = Array(24).fill(0);
     let hourlyMissed = Array(24).fill(0);
 
-    const missedResultStatuses = ["Missed", "No Answer", "Not Answered", "Declined", "Sent to Voicemail"];
+    const missedResultStatuses = ["Missed", "No Answer", "Not Answered", "Declined", "Sent to Voicemail", "Voicemail"];
     const abandonedResultStatuses = ["Abandoned", "Hang Up", "Disconnected"];
 
-    // A call is abandoned if it has an explicit hang-up status OR was missed with a duration < 15 seconds
+    const isAcceptedCall = (log: any) => log.result === "Accepted" || log.result === "Call connected";
+    const isMissedStatusCall = (log: any) => missedResultStatuses.includes(log.result) || log.action === "Missed";
+
+    // 1. Answered: Accepted connection with duration >= 45s (agent conversation)
+    answeredCalls = queueLogs.filter((l: any) => {
+      return isAcceptedCall(l) && (l.duration || 0) >= 45;
+    }).length;
+
+    // 2. Abandoned: Explicit hang-up, OR any call (accepted/missed) under 9s (IVR drops)
     abandonedCalls = queueLogs.filter((l: any) => {
       const isExplicitAbandon = abandonedResultStatuses.includes(l.result);
-      const isShortMissed = (missedResultStatuses.includes(l.result) || l.action === "Missed") && (l.duration || 0) < 15;
-      return isExplicitAbandon || isShortMissed;
+      const isShortAccepted = isAcceptedCall(l) && (l.duration || 0) <= 8;
+      const isShortMissed = isMissedStatusCall(l) && (l.duration || 0) <= 8;
+      return isExplicitAbandon || isShortAccepted || isShortMissed;
     }).length;
 
-    // A call is missed if it has a missed status and was not a short hang-up (duration >= 15 seconds)
+    // 3. Missed: Unanswered status with duration >= 9s (rings through to VM or timeout)
     missedCalls = queueLogs.filter((l: any) => {
-      const isMissedStatus = missedResultStatuses.includes(l.result) || l.action === "Missed";
-      const isShortMissed = isMissedStatus && (l.duration || 0) < 15;
-      return isMissedStatus && !isShortMissed;
+      return isMissedStatusCall(l) && (l.duration || 0) >= 9;
     }).length;
 
-    answeredCalls = Math.max(0, totalCallsToday - missedCalls - abandonedCalls);
-    
     // Estimate wait time: missed/abandoned duration is exact wait time, answered calls have an average wait time of ~20s
     const waitTimes = queueLogs.map((l: any) => {
-      const isAnswered = !missedResultStatuses.includes(l.result) && !abandonedResultStatuses.includes(l.result);
-      if (isAnswered) {
+      const isAns = isAcceptedCall(l) && (l.duration || 0) >= 45;
+      if (isAns) {
         return 15 + ((l.duration || 0) % 20); // Simulated wait time between 15-35s
       }
       return Math.min(l.duration || 15, 120); // Capped at 120s for hangups
@@ -263,13 +268,19 @@ export async function GET(request: Request) {
       if (log.startTime) {
         const hour = new Date(log.startTime).getHours();
         if (hour >= 0 && hour < 24) {
-          hourlyVolume[hour]++;
-          const isMissed = missedResultStatuses.includes(log.result) || log.action === "Missed";
-          const isAbandoned = abandonedResultStatuses.includes(log.result);
-          if (isMissed || isAbandoned) {
-            hourlyMissed[hour]++;
-          } else {
-            hourlyAnswered[hour]++;
+          const isAns = isAcceptedCall(log) && (log.duration || 0) >= 45;
+          const isMiss = isMissedStatusCall(log) && (log.duration || 0) >= 9;
+          const isAban = abandonedResultStatuses.includes(log.result) || 
+                         (isAcceptedCall(log) && (log.duration || 0) <= 8) ||
+                         (isMissedStatusCall(log) && (log.duration || 0) <= 8);
+          
+          if (isAns || isMiss || isAban) {
+            hourlyVolume[hour]++;
+            if (isMiss || isAban) {
+              hourlyMissed[hour]++;
+            } else {
+              hourlyAnswered[hour]++;
+            }
           }
         }
       }
@@ -318,9 +329,7 @@ export async function GET(request: Request) {
 
     const missedCallsList = queueLogs
       .filter((l: any) => {
-        const isMissedStatus = missedResultStatuses.includes(l.result) || l.action === "Missed";
-        const isShortMissed = isMissedStatus && (l.duration || 0) < 15;
-        return isMissedStatus && !isShortMissed;
+        return isMissedStatusCall(l) && (l.duration || 0) >= 9;
       })
       .map((l: any) => ({
         id: l.id || `missed-${Math.random().toString(36).substr(2, 9)}`,
