@@ -10,10 +10,11 @@ interface MetricRowProps {
   change: number;
   pct: number;
   sparkData: number[];
+  color?: string;
   isRate?: boolean;
 }
 
-function MetricRow({ label, cur, prev, change, pct, sparkData, isRate = false }: MetricRowProps) {
+function MetricRow({ label, cur, prev, change, pct, sparkData, color, isRate = false }: MetricRowProps) {
   const isPositive = change > 0;
   const isNeutral = change === 0;
   const suffix = isRate ? "%" : "";
@@ -47,7 +48,7 @@ function MetricRow({ label, cur, prev, change, pct, sparkData, isRate = false }:
       </td>
       <td className="py-2.5 pr-4 text-right">
         <div className="flex justify-end items-center h-8">
-          <Sparkline data={sparkData} color={isGoodDirection && !isNeutral ? "#10B981" : "#C5A880"} />
+          <Sparkline data={sparkData} color={color || (isGoodDirection && !isNeutral ? "#10B981" : "#C5A880")} />
         </div>
       </td>
     </tr>
@@ -80,7 +81,7 @@ export default function PerformanceTable({ comparisonData, sparklines, period, s
               className={`px-2.5 py-1 text-[10px] font-mono font-medium rounded-md transition-all cursor-pointer ${
                 period === p
                   ? "bg-blue-600 text-white shadow-sm"
-                  : "text-slate-550 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
+                  : "text-slate-550 dark:bg-transparent dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
               }`}
             >
               {p}
@@ -92,12 +93,12 @@ export default function PerformanceTable({ comparisonData, sparklines, period, s
       <div className="overflow-x-auto">
         <table className="w-full border-collapse">
           <thead>
-            <tr className="border-b border-gray-200/60 text-[10px] font-mono text-text-secondary uppercase tracking-wider">
-              <th className="py-2 pl-4 text-left font-semibold">Metric</th>
-              <th className="py-2 text-right font-semibold">Current</th>
-              <th className="py-2 text-right font-semibold">Previous</th>
-              <th className="py-2 text-right font-semibold">Change</th>
-              <th className="py-2 pr-4 text-right font-semibold">Trend (12 Days)</th>
+            <tr className="border-b border-gray-200/30 text-[10px] font-mono text-text-secondary uppercase tracking-wider">
+              <th className="py-2.5 pl-4 text-left font-medium">Metric</th>
+              <th className="py-2.5 text-right font-medium">Current</th>
+              <th className="py-2.5 text-right font-medium">Previous</th>
+              <th className="py-2.5 text-right font-medium">Change</th>
+              <th className="py-2.5 pr-4 text-right font-medium">Trend</th>
             </tr>
           </thead>
           <tbody>
@@ -108,6 +109,7 @@ export default function PerformanceTable({ comparisonData, sparklines, period, s
               change={activeData.inbound.change}
               pct={activeData.inbound.pct}
               sparkData={sparklines?.inbound || []}
+              color="#3b82f6"
             />
             <MetricRow
               label="Answered Calls"
@@ -116,6 +118,7 @@ export default function PerformanceTable({ comparisonData, sparklines, period, s
               change={activeData.answered.change}
               pct={activeData.answered.pct}
               sparkData={sparklines?.answered || []}
+              color="#10b981"
             />
             <MetricRow
               label="Missed Calls"
@@ -124,6 +127,7 @@ export default function PerformanceTable({ comparisonData, sparklines, period, s
               change={activeData.missed.change}
               pct={activeData.missed.pct}
               sparkData={sparklines?.missed || []}
+              color="#ef4444"
             />
             <MetricRow
               label="Abandoned Calls"
@@ -132,6 +136,7 @@ export default function PerformanceTable({ comparisonData, sparklines, period, s
               change={activeData.abandoned.change}
               pct={activeData.abandoned.pct}
               sparkData={sparklines?.abandoned || []}
+              color="#f59e0b"
             />
             <MetricRow
               label="Answer Rate"
@@ -140,6 +145,7 @@ export default function PerformanceTable({ comparisonData, sparklines, period, s
               change={activeData.answerRate.change}
               pct={activeData.answerRate.pct}
               sparkData={sparklines?.answerRate || []}
+              color="#10b981"
               isRate
             />
             <MetricRow
@@ -149,6 +155,7 @@ export default function PerformanceTable({ comparisonData, sparklines, period, s
               change={activeData.missedRate.change}
               pct={activeData.missedRate.pct}
               sparkData={sparklines?.missedRate || []}
+              color="#ef4444"
               isRate
             />
             <MetricRow
@@ -158,6 +165,7 @@ export default function PerformanceTable({ comparisonData, sparklines, period, s
               change={activeData.abandonRate.change}
               pct={activeData.abandonRate.pct}
               sparkData={sparklines?.abandonRate || []}
+              color="#f59e0b"
               isRate
             />
           </tbody>

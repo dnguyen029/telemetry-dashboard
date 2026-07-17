@@ -19,6 +19,11 @@ export function Sparkline({ data, width = 100, height = 28, color = "#C5A880" }:
     return `${x},${y}`;
   }).join(" ");
 
+  const lastIndex = data.length - 1;
+  const lastVal = data[lastIndex];
+  const lastX = width;
+  const lastY = height - ((lastVal - min) / range) * height;
+
   return (
     <svg width={width} height={height} className="overflow-visible">
       <polyline
@@ -28,6 +33,12 @@ export function Sparkline({ data, width = 100, height = 28, color = "#C5A880" }:
         strokeLinecap="round"
         strokeLinejoin="round"
         points={points}
+      />
+      <circle
+        cx={lastX}
+        cy={lastY}
+        r="2.5"
+        fill={color}
       />
     </svg>
   );

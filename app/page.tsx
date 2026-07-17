@@ -26,7 +26,11 @@ import {
   Menu,
   Moon,
   Sun,
-  LayoutDashboard
+  LayoutDashboard,
+  Settings,
+  ChevronsLeft,
+  ChevronsRight,
+  FileText
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -75,6 +79,7 @@ export default function DashboardSuite() {
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [mounted, setMounted] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     // Read persisted theme or system setting on mount
@@ -405,25 +410,33 @@ export default function DashboardSuite() {
     <div className="flex min-h-screen bg-slate-50 text-slate-950 dark:bg-slate-950 dark:text-slate-100 font-sans transition-colors duration-300">
       
       {/* DESKTOP LEFT SIDEBAR */}
-      <aside className="w-64 border-r border-slate-200 dark:border-slate-900 bg-slate-100/50 dark:bg-slate-950/80 backdrop-blur shrink-0 hidden md:flex flex-col justify-between sticky top-0 h-screen p-5 z-40">
+      <aside className={`border-r border-slate-200 dark:border-slate-900 bg-slate-100/50 dark:bg-slate-950/80 backdrop-blur shrink-0 hidden md:flex flex-col justify-between sticky top-0 h-screen transition-all duration-300 z-40 ${
+        isSidebarCollapsed ? "w-16 p-3" : "w-64 p-5"
+      }`}>
         <div className="space-y-7">
           {/* Header logo / Brand */}
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-blue-600/10 border border-blue-500/20 text-blue-600 dark:text-blue-400">
+            <div className="p-2.5 rounded-xl bg-blue-600/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 shrink-0">
               <Database className="w-5 h-5" />
             </div>
-            <div>
-              <h1 className="text-sm font-bold tracking-tight text-slate-800 dark:text-white">Ariel Bath Ops</h1>
-              <p className="text-[9px] font-mono text-slate-500 uppercase tracking-wider">DEC-2026 Telemetry</p>
-            </div>
+            {!isSidebarCollapsed && (
+              <div className="transition-all duration-200 opacity-100">
+                <h1 className="text-sm font-bold tracking-tight text-slate-800 dark:text-white">Ariel Bath Ops</h1>
+                <p className="text-[9px] font-mono text-slate-500 uppercase tracking-wider">DEC-2026 Telemetry</p>
+              </div>
+            )}
           </div>
 
           {/* Navigation Links */}
           <nav className="space-y-1">
             {[
-              { id: "overview", label: "Overview Hub", icon: LayoutDashboard },
-              { id: "telemetry", label: "Call Analytics", icon: Phone },
-              { id: "competitor", label: "MAP & Competitors", icon: BarChart2 }
+              { id: "overview", label: "Overview", icon: LayoutDashboard },
+              { id: "telemetry", label: "Call & Email Volume", icon: Phone },
+              { id: "staffing", label: "Staffing", icon: Users },
+              { id: "performance", label: "Performance", icon: TrendingUp },
+              { id: "quality", label: "Quality", icon: Shield },
+              { id: "reports", label: "Reports", icon: FileText },
+              { id: "competitor", label: "Data", icon: Database }
             ].map((item) => {
               const Icon = item.icon;
               const isActive = activeSuiteTab === item.id;
@@ -434,34 +447,78 @@ export default function DashboardSuite() {
                     setActiveSuiteTab(item.id);
                     setIsMobileMenuOpen(false);
                   }}
+                  title={isSidebarCollapsed ? item.label : undefined}
                   className={`w-full flex items-center gap-3 px-3.5 py-2.5 text-xs font-mono rounded-xl transition-all duration-250 ${
                     isActive 
                       ? "bg-blue-600 text-white shadow-lg shadow-blue-600/15" 
-                      : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-900/50"
-                  }`}
+                      : "text-slate-550 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-900/50"
+                  } ${isSidebarCollapsed ? "justify-center px-0" : ""}`}
                 >
-                  <Icon className="w-4 h-4" />
-                  {item.label}
+                  <Icon className="w-4 h-4 shrink-0" />
+                  {!isSidebarCollapsed && <span className="truncate">{item.label}</span>}
                 </button>
               );
             })}
           </nav>
         </div>
 
-        {/* Sidebar Footer (Theme Toggle) */}
-        <div className="border-t border-slate-200 dark:border-slate-900 pt-4">
+        {/* Sidebar Footer Controls */}
+        <div className="space-y-3.5 border-t border-slate-200 dark:border-slate-900 pt-4">
+          {/* Settings Trigger */}
+          <button
+            onClick={() => setActiveSuiteTab("settings")}
+            title={isSidebarCollapsed ? "Settings" : undefined}
+            className={`w-full flex items-center gap-3 px-3.5 py-2 text-xs font-mono text-slate-500 hover:text-slate-850 dark:text-slate-400 dark:hover:text-slate-205 rounded-xl hover:bg-slate-200/40 dark:hover:bg-slate-900/40 transition-colors ${
+              isSidebarCollapsed ? "justify-center px-0" : ""
+            } ${activeSuiteTab === "settings" ? "text-blue-500 font-semibold" : ""}`}
+          >
+            <Settings className="w-4 h-4 shrink-0" />
+            {!isSidebarCollapsed && <span>Settings</span>}
+          </button>
+
+          {/* Theme Toggle */}
           <button
             onClick={toggleTheme}
-            className="w-full flex items-center justify-between px-3.5 py-2.5 text-xs font-mono rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-200/20 dark:bg-slate-900/20 hover:bg-slate-200/60 dark:hover:bg-slate-900/50 transition-colors"
+            title={isSidebarCollapsed ? "Toggle Theme" : undefined}
+            className={`w-full flex items-center justify-between px-3.5 py-2 text-xs font-mono rounded-xl border border-slate-250/50 dark:border-slate-850 bg-slate-200/10 dark:bg-slate-900/10 hover:bg-slate-200/40 dark:hover:bg-slate-900/40 transition-colors ${
+              isSidebarCollapsed ? "justify-center px-0 border-none bg-transparent hover:bg-transparent" : ""
+            }`}
           >
-            <span className="text-slate-500 dark:text-slate-400">Theme</span>
-            <span className="flex items-center gap-1.5 font-bold">
-              {theme === "dark" ? (
-                <>Dark <Moon className="w-3.5 h-3.5 text-blue-400" /></>
+            {!isSidebarCollapsed ? (
+              <>
+                <span className="text-slate-500 dark:text-slate-400">Theme</span>
+                <span className="flex items-center gap-1.5 font-bold">
+                  {theme === "dark" ? (
+                    <>Dark <Moon className="w-3.5 h-3.5 text-blue-400" /></>
+                  ) : (
+                    <>Light <Sun className="w-3.5 h-3.5 text-amber-500" /></>
+                  )}
+                </span>
+              </>
+            ) : (
+              theme === "dark" ? (
+                <Moon className="w-4 h-4 text-blue-400 shrink-0" />
               ) : (
-                <>Light <Sun className="w-3.5 h-3.5 text-amber-500" /></>
-              )}
-            </span>
+                <Sun className="w-4 h-4 text-amber-500 shrink-0" />
+              )
+            )}
+          </button>
+
+          {/* Collapse Trigger arrow */}
+          <button
+            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            className={`w-full flex items-center gap-3 px-3.5 py-2 text-xs font-mono text-slate-500 hover:text-slate-850 dark:text-slate-400 dark:hover:text-slate-200 transition-colors cursor-pointer ${
+              isSidebarCollapsed ? "justify-center px-0" : ""
+            }`}
+          >
+            {isSidebarCollapsed ? (
+              <ChevronsRight className="w-4 h-4 shrink-0" />
+            ) : (
+              <>
+                <ChevronsLeft className="w-4 h-4 shrink-0" />
+                <span>Collapse menu</span>
+              </>
+            )}
           </button>
         </div>
       </aside>
@@ -678,7 +735,7 @@ export default function DashboardSuite() {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 dark:border-slate-900 pb-5">
                 <div className="space-y-1">
                   <h2 className="text-xl font-bold font-heading text-slate-800 dark:text-white flex items-center gap-2.5">
-                    Call Operations Control
+                    Call & Email Volume
                     {rcData?.status === "fallback" && (
                       <Badge variant="outline" className="text-[9px] font-mono text-amber-500 border-amber-500/20 bg-amber-500/5">
                         FALLBACK SIMULATION
@@ -686,7 +743,7 @@ export default function DashboardSuite() {
                     )}
                   </h2>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Active Connection: <span className="text-blue-500 dark:text-blue-400 font-mono font-medium">{rcData?.integrationSource || "Locating..."}</span>
+                    Call performance and staffing coverage
                   </p>
                 </div>
 
@@ -699,7 +756,10 @@ export default function DashboardSuite() {
                     className="px-2 py-1 text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
                   />
                   <span className="text-[10px] font-mono text-slate-450 dark:text-slate-500 hidden sm:inline">
-                    Update: {rcData?.lastUpdated ? new Date(rcData.lastUpdated).toLocaleTimeString() : "Pending"}
+                    {selectedDate === new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" }) 
+                      ? `Update: ${rcData?.lastUpdated ? new Date(rcData.lastUpdated).toLocaleTimeString("en-US", { timeZone: "America/Los_Angeles", hour: "numeric", minute: "2-digit", second: "2-digit", hour12: true }) + " PST" : "Pending"}`
+                      : `Data as of: ${selectedDate} 11:59 PM PST`
+                    }
                   </span>
                   <Button 
                     onClick={() => fetchRcMetrics(selectedDate)} 
@@ -798,32 +858,36 @@ export default function DashboardSuite() {
                 </div>
               )}
 
-              {/* Performance charts and grids */}
+              {/* Performance Table (Full Width) */}
+              {rcData?.comparisonData && rcData?.sparklines && (
+                <div className="w-full">
+                  <PerformanceTable
+                    comparisonData={rcData.comparisonData}
+                    sparklines={rcData.sparklines}
+                    period={period}
+                    setPeriod={setPeriod}
+                  />
+                </div>
+              )}
+
+              {/* Charts Grid (3 Columns) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {rcData?.hourlyTrends && (
+                  <CallsByHourChart hourlyTrends={rcData.hourlyTrends} />
+                )}
+                {rcData?.hotspotData && (
+                  <HotspotsHeatmap hotspotData={rcData.hotspotData} />
+                )}
+                {rcData?.businessHoursData && (
+                  <BusinessHoursChart businessHoursData={rcData.businessHoursData} />
+                )}
+              </div>
+
+              {/* Bottom Row: Daily Volume Trend & Performance sidebar (2 columns grid) */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-6">
-                  <Card className="glass-card border-slate-200 dark:border-slate-900 p-6 space-y-4 glow-blue">
-                    <h3 className="font-bold text-sm text-slate-800 dark:text-white font-heading">Call Volume Trend (Hourly)</h3>
-                    <div className="h-[240px]">
-                      {rcData?.hourlyTrends && <CallsByHourChart hourlyTrends={rcData.hourlyTrends} />}
-                    </div>
-                  </Card>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {rcData?.hotspotData && (
-                      <HotspotsHeatmap hotspotData={rcData.hotspotData} />
-                    )}
-                    {rcData?.dailyTrends && (
-                      <DailyTrendChart dailyTrends={rcData.dailyTrends} />
-                    )}
-                  </div>
-
-                  {rcData?.comparisonData && rcData?.sparklines && (
-                    <PerformanceTable
-                      comparisonData={rcData.comparisonData}
-                      sparklines={rcData.sparklines}
-                      period={period}
-                      setPeriod={setPeriod}
-                    />
+                  {rcData?.dailyTrends && (
+                    <DailyTrendChart dailyTrends={rcData.dailyTrends} />
                   )}
                 </div>
 
@@ -904,6 +968,21 @@ export default function DashboardSuite() {
                 </div>
               </div>
 
+            </div>
+          )}
+
+          {/* PLACEHOLDER VIEWS */}
+          {["staffing", "performance", "quality", "reports", "settings"].includes(activeSuiteTab) && (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4 animate-in fade-in duration-300">
+              <div className="p-4 rounded-full bg-blue-600/10 border border-blue-500/20 text-blue-600 dark:text-blue-400">
+                <LayoutDashboard className="w-10 h-10 animate-pulse" />
+              </div>
+              <div className="text-center space-y-1.5">
+                <h2 className="text-lg font-bold capitalize text-slate-800 dark:text-white">{activeSuiteTab} Analytics</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm">
+                  This section is currently under development. Real-time active data sets are configured under Call & Email Volume and Data tabs.
+                </p>
+              </div>
             </div>
           )}
 
