@@ -141,6 +141,37 @@ export async function GET(request: Request) {
       enabledUserCount = recordsList.filter((r: any) => r.type === "User" || r.type === "Department").length;
     }
 
+    // Fetch all account phone numbers to map DIDs assigned to User extensions
+    const userPhoneNumbers = new Set<string>();
+    try {
+      const pnUrl = `${server}/restapi/v1.0/account/~/phone-number?perPage=100`;
+      const pnRes = await fetch(pnUrl, {
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Accept": "application/json"
+        },
+        cache: "no-store"
+      });
+      if (pnRes.ok) {
+        const pnData = await pnRes.json();
+        const pns = pnData.records || [];
+        pns.forEach((p: any) => {
+          const ext = p.extension;
+          if (ext) {
+            const extRecord = recordsList.find((r: any) => 
+              String(r.id) === String(ext.id) || 
+              String(r.extensionNumber) === String(ext.extensionNumber)
+            );
+            if (extRecord && extRecord.type === "User") {
+              if (p.phoneNumber) userPhoneNumbers.add(p.phoneNumber);
+            }
+          }
+        });
+      }
+    } catch (pnErr) {
+      console.error("Failed to fetch account phone numbers mapping:", pnErr);
+    }
+
     // 2. Fetch Call Logs with Dynamic Midnight Range & Pagination
     let logs: any[] = [];
     let page = 1;
@@ -179,8 +210,11 @@ export async function GET(request: Request) {
     const queueLogs = logs.filter((l: any) => {
       // 1. Double check direction is Inbound
       if (l.direction !== "Inbound") return false;
-      // 2. Must not be direct to an agent
-      const isDirectToAgent = userNames.includes(l.to?.name) || userExts.includes(l.to?.extensionNumber);
+      // 2. Must not be direct to an agent (check name, extension, and direct phone number)
+      const isDirectToAgent = 
+        userNames.includes(l.to?.name) || 
+        userExts.includes(l.to?.extensionNumber) ||
+        (l.to?.phoneNumber && userPhoneNumbers.has(l.to.phoneNumber));
       return !isDirectToAgent;
     });
 
