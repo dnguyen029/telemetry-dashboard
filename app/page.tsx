@@ -883,90 +883,12 @@ export default function DashboardSuite() {
                 )}
               </div>
 
-              {/* Bottom Row: Daily Volume Trend & Performance sidebar (2 columns grid) */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 space-y-6">
-                  {rcData?.dailyTrends && (
-                    <DailyTrendChart dailyTrends={rcData.dailyTrends} />
-                  )}
+              {/* Bottom Row: Daily Volume Trend (Full Width) */}
+              {rcData?.dailyTrends && (
+                <div className="w-full">
+                  <DailyTrendChart dailyTrends={rcData.dailyTrends} />
                 </div>
-
-                {/* Performance sidebar */}
-                <div className="space-y-6">
-                  <Card className="glass-card border-slate-200 dark:border-slate-900 glow-indigo">
-                    <CardHeader>
-                      <CardTitle className="text-sm font-bold text-slate-800 dark:text-white font-heading">Product Spec Support Allocations</CardTitle>
-                      <CardDescription className="text-[11px] text-slate-500 dark:text-slate-400">Missed calls distributed by queue priority</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {rcData?.queue8Allocations && (
-                        <div className="space-y-3.5">
-                          <div className="space-y-1.5">
-                            <div className="flex justify-between text-xs font-mono">
-                              <span className="text-slate-550 dark:text-slate-450">Product Specs:</span>
-                              <strong className="text-slate-800 dark:text-white">{rcData.queue8Allocations.productSpecs} calls ({getPercent(rcData.queue8Allocations.productSpecs)}%)</strong>
-                            </div>
-                            <Progress value={getPercent(rcData.queue8Allocations.productSpecs)} className="h-1.5 bg-slate-200 dark:bg-slate-800" />
-                          </div>
-                          
-                          <div className="space-y-1.5">
-                            <div className="flex justify-between text-xs font-mono">
-                              <span className="text-slate-550 dark:text-slate-450">Damages & Defects:</span>
-                              <strong className="text-slate-800 dark:text-white">{rcData.queue8Allocations.damagesDefects} calls ({getPercent(rcData.queue8Allocations.damagesDefects)}%)</strong>
-                            </div>
-                            <Progress value={getPercent(rcData.queue8Allocations.damagesDefects)} className="h-1.5 bg-slate-200 dark:bg-slate-800" />
-                          </div>
-
-                          <div className="space-y-1.5">
-                            <div className="flex justify-between text-xs font-mono">
-                              <span className="text-slate-550 dark:text-slate-450">WISMO Order Status:</span>
-                              <strong className="text-slate-800 dark:text-white">{rcData.queue8Allocations.wismo} calls ({getPercent(rcData.queue8Allocations.wismo)}%)</strong>
-                            </div>
-                            <Progress value={getPercent(rcData.queue8Allocations.wismo)} className="h-1.5 bg-slate-200 dark:bg-slate-800" />
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  {/* Queue Active List */}
-                  <Card className="glass-card border-slate-200 dark:border-slate-900 glow-indigo">
-                    <CardHeader>
-                      <CardTitle className="text-sm font-bold text-slate-800 dark:text-white font-heading">Active Queue Monitoring</CardTitle>
-                      <CardDescription className="text-[11px] text-slate-500 dark:text-slate-400 font-sans">Extensions status and lines logs</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      {rcData?.extensions && (
-                        <div className="divide-y divide-slate-200 dark:divide-slate-900 max-h-[300px] overflow-y-auto pr-1 no-scrollbar">
-                          {rcData.extensions.map((ext: any) => (
-                            <div key={ext.id} className="py-2.5 flex justify-between items-center text-xs font-mono">
-                              <div className="space-y-0.5">
-                                <span className="text-slate-700 dark:text-slate-300 block font-medium font-sans">{ext.name}</span>
-                                <div className="flex items-center gap-1.5 text-[10px] text-slate-450 dark:text-slate-500">
-                                  <span>Ext {ext.extensionNumber} • {ext.type}</span>
-                                  {ext.occupancy !== undefined && ext.type === "User" && (
-                                    <>
-                                      <span>•</span>
-                                      <span className="text-emerald-500 font-semibold">{ext.occupancy}% Occupancy</span>
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-                              <Badge className={
-                                ext.status === "Closed" 
-                                  ? "bg-red-500/10 text-red-500 border border-red-500/20" 
-                                  : "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
-                              }>
-                                {ext.status}
-                              </Badge>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
+              )}
 
             </div>
           )}
