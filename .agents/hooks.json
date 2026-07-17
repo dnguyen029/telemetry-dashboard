@@ -1,0 +1,97 @@
+{
+  "safety-gate": {
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 hooks/safety_gate.py"
+          }
+        ]
+      }
+    ]
+  },
+  "sync-context": {
+    "PostInvocation": [
+      {
+        "type": "command",
+        "command": "/usr/bin/python3 hooks/archive_lessons.py"
+      }
+    ]
+  },
+  "quality-gate": {
+    "PostToolUse": [
+      {
+        "matcher": "write_to_file|replace_file_content|multi_replace_file_content",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 hooks/lint_workspace.py"
+          },
+          {
+            "type": "command",
+            "command": "/bin/bash hooks/python-validate.sh"
+          },
+          {
+            "type": "command",
+            "command": "/bin/bash hooks/markdown-validate.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "mcp-cleanup": {
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": "/usr/bin/python3 hooks/sync_implicit_pb.py"
+      },
+      {
+        "type": "command",
+        "command": "/usr/bin/python3 hooks/flush_pending_lessons.py"
+      },
+      {
+        "type": "command",
+        "command": "/usr/bin/python3 hooks/mcp_hygiene.py"
+      },
+      {
+        "type": "command",
+        "command": "/usr/bin/python3 hooks/load_lessons_context.py"
+      }
+    ]
+  },
+  "dashboard-sync": {
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": "/usr/bin/python3 hooks/update_dashboard.py processing"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 hooks/sync_context.py"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": "/usr/bin/python3 hooks/update_dashboard.py idle"
+      },
+      {
+        "type": "command",
+        "command": "/usr/bin/python3 hooks/mcp_hygiene.py"
+      },
+      {
+        "type": "command",
+        "command": "/usr/bin/python3 hooks/alert_handler.py"
+      }
+    ]
+  }
+}

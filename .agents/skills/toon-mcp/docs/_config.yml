@@ -1,0 +1,37 @@
+title: TOON-MCP Documentation
+description: Token-Optimized Object Notation for efficient AI context management
+baseurl: "/toon-context-mcp"
+url: "https://aj-geddes.github.io"
+
+# Build with Jekyll (no theme, using custom layouts)
+markdown: kramdown
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+
+# Plugins (included automatically with github-pages gem)
+plugins:
+  - jekyll-seo-tag
+  - jekyll-sitemap
+  - jekyll-feed
+
+# Build settings
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor
+  - .sass-cache
+  - .jekyll-cache
+
+# Defaults
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: "default"
+  - scope:
+      path: "guides"
+      type: "guides"
+    values:
+      layout: "guide"
