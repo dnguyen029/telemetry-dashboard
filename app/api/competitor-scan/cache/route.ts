@@ -6,11 +6,11 @@ const supabaseKey = process.env.SUPABASE_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Helper to read cache safely from Supabase
-async function getCachedProducts() {
+async function getCachedProductsWithTimestamp() {
   try {
     const { data, error } = await supabase
       .from("price_cache")
-      .select("data")
+      .select("data, updated_at")
       .eq("id", "default_catalog")
       .single();
 
@@ -18,7 +18,7 @@ async function getCachedProducts() {
       console.error("Supabase select error:", error);
       return null;
     }
-    return data.data;
+    return { products: data.data, updated_at: data.updated_at };
   } catch (error) {
     console.error("Failed to query Supabase price cache:", error);
     return null;
@@ -27,7 +27,7 @@ async function getCachedProducts() {
 
 export async function GET(request: NextRequest) {
   try {
-    const cached = await getCachedProducts();
+    const cached = await getCachedProductsWithTimestamp();
     if (!cached) {
       return new Response(
         JSON.stringify({ error: "Cache file not initialized" }),
@@ -54,7 +54,11 @@ export async function POST(request: NextRequest) {
     if (products && Array.isArray(products)) {
       const { error } = await supabase
         .from("price_cache")
-        .upsert({ id: "default_catalog", data: products });
+        .upsert({ 
+          id: "default_catalog", 
+          data: products,
+          updated_at: new Date().toISOString()
+        });
 
       if (error) {
         throw new Error(error.message);

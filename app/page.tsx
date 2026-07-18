@@ -49,6 +49,7 @@ import DailyTrendChart from "@/components/ringcentral/DailyTrendChart";
 
 // Competitor Data
 import { CORE_PRODUCTS, CompetitorProduct, ProductPrice } from "@/lib/competitorData";
+import { isValidVanityMatch } from "@/lib/priceFilters";
 
 const RETAILERS = ['homedepot', 'lowes', 'wayfair', 'amazon', 'walmart', 'ebay', 'target', 'bestbuy'];
 
@@ -182,6 +183,7 @@ export default function DashboardSuite() {
   // MAP editing states
   const [editingMapValue, setEditingMapValue] = useState<string>("");
   const [isSavingMap, setIsSavingMap] = useState(false);
+  const [lastSyncedTime, setLastSyncedTime] = useState<string | null>(null);
 
   // AI Copilot Chat states
   const [isCopilotOpen, setIsCopilotOpen] = useState(false);
@@ -307,11 +309,16 @@ export default function DashboardSuite() {
       try {
         const response = await fetch("/api/competitor-scan/cache");
         if (response.ok) {
-          const data = await response.json();
-          if (Array.isArray(data)) {
-            setProducts(data.map(normalizeProductPrices));
-          } else {
-            setProducts(data);
+          const resBody = await response.json();
+          if (resBody && typeof resBody === "object" && !Array.isArray(resBody)) {
+            if (Array.isArray(resBody.products)) {
+              setProducts(resBody.products.map(normalizeProductPrices));
+            }
+            if (resBody.updated_at) {
+              setLastSyncedTime(resBody.updated_at);
+            }
+          } else if (Array.isArray(resBody)) {
+            setProducts(resBody.map(normalizeProductPrices));
           }
         }
       } catch (err) {
@@ -355,14 +362,21 @@ export default function DashboardSuite() {
               const offer = cross[apiRetailerKey];
 
               if (offer && offer.status !== "mismatch") {
-                if (offer.price !== null && offer.price !== undefined && offer.price > 0) {
-                  product.prices[retailerKey].price = offer.price;
+                const offerPrice = offer.price !== null && offer.price !== undefined && offer.price > 0 ? offer.price : 0;
+                
+                // Validate match using heuristics
+                const isValid = isValidVanityMatch(offer.url, offerPrice, product.mapPrice);
+
+                if (isValid) {
+                  product.prices[retailerKey].price = offerPrice;
+                  product.prices[retailerKey].inStock = offer.in_stock !== false;
+                  if (offer.url) {
+                    product.prices[retailerKey].url = offer.url;
+                  }
                 } else {
+                  // Mismatched or invalid listing price, set to 0 (N/A)
                   product.prices[retailerKey].price = 0;
-                }
-                product.prices[retailerKey].inStock = offer.in_stock !== false;
-                if (offer.url) {
-                  product.prices[retailerKey].url = offer.url;
+                  product.prices[retailerKey].inStock = false;
                 }
               }
             });
@@ -387,6 +401,7 @@ export default function DashboardSuite() {
       });
 
       setProducts(updatedProducts);
+      setLastSyncedTime(new Date().toISOString());
     } catch (err: any) {
       alert(`Sync error: ${err.message || err}`);
     } finally {
@@ -837,6 +852,12 @@ export default function DashboardSuite() {
                       className="w-3.5 h-3.5 accent-amber-500 rounded border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 cursor-pointer"
                     />
                   </div>
+
+                  {lastSyncedTime && (
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono self-center mr-2">
+                      LAST SYNCED: {new Date(lastSyncedTime).toLocaleString()}
+                    </span>
+                  )}
 
                   <Button 
                     onClick={handleBatchSync} 
