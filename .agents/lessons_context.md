@@ -1,7 +1,247 @@
 # 🧠 Active lessons learned context (Ground Truth)
 <!-- Method: semantic -->
 
-## 📌 Walkthrough - Telephony & Sheets Fixes (Date: N/A | Match Score: 0.612)
+## 📌 Walkthrough - Standalone Admin Portal & RingCentral Dashboard (Date: N/A | Match Score: 0.588)
+
+### Walkthrough - Standalone Admin Portal & RingCentral Dashboard
+
+We have successfully migrated the admin portal overlay modal to a standalone, full-screen `/admin` page route and integrated the live RingCentral Call & Queue Dashboard.
+
+---
+
+#### Changes Completed
+
+##### 1. Backend Route Integration
+- **[NEW] [app/api/ringcentral/route.ts](file:///home/dnguyen029/swarm-agency/app/api/ringcentral/route.ts)**:
+  - Safe OAuth JWT client authorization integration with RingCentral.
+  - Active queue metrics and extension status extraction.
+  - Implementation of a **30-second server-side memory cache** protecting the endpoints from rate limits (429s).
+  - Resilient fallback mode delivering mock/cached metrics if credentials are not configured or are expired.
+
+##### 2. Standalone Page Route
+- **[NEW] [app/admin/page.tsx](file:///home/dnguyen029/swarm-agency/app/admin/page.tsx)**:
+  - Renders a passcode authorization gate (`admin`).
+  - Features sessionStorage state retention to preserve login status across simple browser page refreshes.
+  - Integrates the tab routing switcher, setting the **RingCentral Dashboard** as the default tab.
+  - Complies with the luxury editorial design style guidelines (warm organic backdrop gradients and elegant serif typography).
+
+##### 3. Modular Tab Component Extraction
+To improve maintainability and avoid single-file bloat, the original modal's tabs were extracted into separate component files:
+- **[NEW] [components/admin/LeadsTab.tsx](file:///home/dnguyen029/swarm-agency/components/admin/LeadsTab.tsx)**: Manages client lead list inbounds and fetches `/api/leads`.
+- **[NEW] [components/admin/TelemetryTab.tsx](file:///home/dnguyen029/swarm-agency/components/admin/TelemetryTab.tsx)**: Visualizes Supabase query logs.
+- **[NEW] [components/admin/CatalogTab.tsx](file:///home/dnguyen029/swarm-agency/components/admin/CatalogTab.tsx)**: Mappings of the local product registry.
+- **[NEW] [components/admin/RingCentralTab.tsx](file:///home/dnguyen029/swarm-agency/components/admin/RingCentralTab.tsx)**: The new real-time dashboard displaying call metrics, active queue sizes, active extensions, and custom SVG progress bar analytics for specialist call volume.
+
+##### 4. Routing & Cleanups
+- **[MODIFY] [components/Navbar.tsx](file:///home/dnguyen029/swarm-agency/components/Navbar.tsx)**:
+  - Redirects the "PORTAL ACCESS" link directly to `/admin` instead of toggling the modal.
+  - Decoupled modal state parameters and dynamically checks sessionStorage for authorization status.
+- **[MODIFY] [app/page.tsx](file:///home/dnguyen029/swarm-agency/app/page.tsx)**: Cleaned up dynamic imports, modal layout triggers, and unused component logic.
+- **[MODIFY] [app/competitor-dashboard/page.tsx](file:///home/dnguyen029/swarm-agency/app/competitor-dashboard/page.tsx)**: Removed old Navbar modal props.
+- **[MODIFY] [swarm-agency/.env](file:///home/dnguyen029/swarm-agency/.env)**: Sourced `RINGCENTRAL_` credentials.
+
+---
+
+#### Verification Results
+
+We verified compiling and building the Next.js application within the subfolder. The production build succeeded with zero errors:
+
+```bash
+npm run build --prefix /home/dnguyen029/swarm-agency
+```text
+**Compilation Output:**
+```text
+✓ Checking validity of types
+✓ Collecting page data
+✓ Generating static pages (16/16)
+✓ Collecting build traces
+✓ Finalizing page optimization
+```text
+All routes compiled successfully.
+
+---
+
+#### 🎨 Configurator Refactoring, Brand Anonymization & Mobile Optimization
+
+Both visual customizers have been fully separated, anonymized to generic portfolio names to protect customer identities, and optimized for mobile devices:
+
+1. **Brand Name Substitutions**:
+   - `TK Balloons` -> **`Luxury Balloon Studio`**
+   - `Ariel Bath` / `Ariel Vanity` -> **`Luxury Cabinet Studio`**
+2. **Dedicated Separated Routes**:
+   - **`/configurator`**: Renders the standalone **Luxury Cabinet Studio** using the main website's `Navbar`/`Footer` layout.
+   - **`/configurator/balloons`**: Renders the **Luxury Balloon Studio** layout (the capsule switcher toggles have been completely removed from both headers).
+3. **Mobile Layout Optimizations**:
+   - Visualizer container heights adjusted dynamically (`h-[380px] sm:h-[450px] md:h-[550px]`).
+   - SVG cabinet models and wall mirrors wrapped in a responsive scale factor (`scale-[0.6] xs:scale-[0.72] sm:scale-90 md:scale-100 origin-bottom`) to prevent container overflows on mobile devices.
+   - Expected savings stats grid updated to stack columns vertically on mobile screens (`grid-cols-1 sm:grid-cols-3`).
+
+---
+
+#### 📊 Dashboard Visual Tour & Recordings
+
+We recorded the interactive session of the dashboard, displaying the new **Abandoned Call Stats**, the **Hourly Call Distribution Chart**, the **Active Queue Breakdown**, and the **Role-Based Passcodes**:
+
+- **telemetry**: Viewer role (restricts view to the RingCentral dashboard only, hiding admin configuration tabs).
+- **suprememaster**: Admin role (unlocks full access to Leads, Database telemetry logs, Catalog, and Call status).
+
+![Dashboard Verification Walkthrough Recording](/home/dnguyen029/.gemini/antigravity-ide/brain/e8178b26-79b5-49b2-a50a-e4cadf093911/dashboard_update_check_1784223809756.webp)
+
+##### Visual Layout Verification:
+````carousel
+![Inbound KPI cards showing Answered, Missed, and Abandoned stats](/home/dnguyen029/.gemini/antigravity-ide/brain/e8178b26-79b5-49b2-a50a-e4cadf093911/admin_dashboard_initial_1784223816013.png)
+<!-- slide -->
+![Peak load periods bar chart at the bottom](/home/dnguyen029/.gemini/antigravity-ide/brain/e8178b26-79b5-49b2-a50a-e4cadf093911/admin_dashboard_top_1784223820501.png)
+````
+
+---
+
+#### 🚀 Deployment Status
+
+All modifications and new components have been committed and successfully pushed to origin on GitHub. Vercel is actively building the deployment.
+
+---
+
+#### How to Test Locally
+
+1. Settle in the directory and run the local development server:
+   ```bash
+   npm run dev --prefix /home/dnguyen029/swarm-agency
+   ```text
+2. Navigate to `http://localhost:3000/configurator` to test the Luxury Cabinet Studio.
+3. Navigate to `http://localhost:3000/configurator/balloons` to test the Luxury Balloon Studio.
+4. Verify passcode validation:
+   - Use `telemetry` for restricted Call analytics.
+   - Use `suprememaster` for full admin tab layout.
+
+## 📌 Walkthrough: Schema Alignment & WISMO Mock Data Removal (Date: N/A | Match Score: 0.586)
+
+### Walkthrough: Schema Alignment & WISMO Mock Data Removal
+
+We have successfully realigned the lead logging parameter schema from `phone` to `phone_number` across all receptionist app layers, updated the unit tests, and removed the fallback mock shipping response from WISMO lookup routines.
+
+#### Changes Completed
+
+##### 1. Schema Alignment (`phone` ➔ `phone_number`)
+
+- **[MODIFY] [tools.py](file:///home/dnguyen029/antigravity-project/app_build/receptionist/app/tools.py)**:
+
+  - Renamed the `phone` parameter to `phone_number` in the `log_lead` function signature.
+
+  - Aligned the logging dictionary constructor and the `create_ticket` call parameters to match the new `phone_number` key.
+
+- **[MODIFY] [sheets.py (Production)](file:///home/dnguyen029/antigravity-project/app_build/receptionist/app/tools_lib/sheets.py)**:
+
+  - Updated row values mapping in `append_log` and `upsert_log` to fetch `data.get("phone_number", "")` instead of `phone`.
+
+- **[MODIFY] [sheets.py (Simulator)](file:///home/dnguyen029/antigravity-project/app_build/tools/sheets.py)**:
+
+  - Synced the offline simulator's sheets client row mapping to use `phone_number`.
+
+- **[MODIFY] [zendesk.py](file:///home/dnguyen029/antigravity-project/app_build/receptionist/app/tools_lib/zendesk.py)**:
+
+  - Renamed the `phone` parameter to `phone_number` in the `create_ticket` function signature.
+
+  - Updated the ticket description text block and the `requester` configuration payload.
+
+- **[MODIFY] [main.py](file:///home/dnguyen029/antigravity-project/app_build/main.py)**:
+
+  - Changed the Pydantic field inside the `LeadPayload` model to `phone_number`.
+
+  - Updated `_handle_lead_logging` payload parsing.
+
+##### 2. WISMO Mock Data Removal
+
+- **[MODIFY] [tools.py](file:///home/dnguyen029/antigravity-project/app_build/receptionist/app/tools.py)**:
+
+  - Removed the hardcoded FedEx mock shipping fallback block from `wismo_lookup`. When no Zendesk ticket is found, the tool now returns `{"success": True, "found": False, "details": "No order found for this PO."}`.
+
+- **[MODIFY] [main.py](file:///home/dnguyen029/antigravity-project/app_build/main.py)**:
+
+  - Removed the mock shipping fallback dictionary from `_handle_wismo_lookup`. When no tickets are returned, it now maps to `{"success": True, "found": False, "details": "No order found for this PO."}`.
+
+##### 3. Unit Test Updates
+
+- **[MODIFY] [test_zendesk.py](file:///home/dnguyen029/antigravity-project/app_build/receptionist/tests/unit/test_zendesk.py)**:
+
+  - Renamed the unit test invocation parameter keyword arguments from `phone` to `phone_number` to prevent `TypeError` failures.
+
+---
+
+#### Verification Results
+
+##### 1. Automated Test Suite
+
+We executed the receptionist test suite via the virtual environment's pytest runtime:
+
+```bash
+.venv/bin/pytest
+```text
+
+**Output:**
+
+```text
+tests/integration/test_agent.py .                                        [ 16%]
+tests/integration/test_agent_runtime_app.py ..                           [ 50%]
+tests/unit/test_dummy.py .                                               [ 66%]
+tests/unit/test_zendesk.py ..                                            [100%]
+======================= 6 passed, 14 warnings in 21.07s ========================
+```text
+
+- **Result**: **SUCCESS**
+
+##### 2. Manual Verification
+
+We initiated the interactive simulator mode and verified that the server boots successfully, registers incoming terminal inputs, and terminates cleanly under the updated schema:
+
+```bash
+/home/dnguyen029/antigravity-project/.venv/bin/python3 app_build/main.py --interactive
+```text
+
+**Output:**
+
+```text
+2026-06-12 03:07:44,123 [INFO] ⚡ Starting Optimized Agent Simulation Mode...
+
+=======================================================
+Welcome to Ariel Bath AI Receptionist Routing Simulator
+=======================================================
+Caller: exit
+```text
+
+- **Result**: **SUCCESS**
+
+#### Hardened Orchestrator Rules (KISS/YAGNI/Postel's Law alignment)
+
+We updated the Orchestrator's ruleset to balance simplicity and robustness using standard industry practices.
+
+##### 1. Rules Update
+- **[MODIFY] [.agents/rules/orchestrator.md](file:///home/dnguyen029/antigravity-project/.agents/rules/orchestrator.md)**:
+  - Injected the **Balance Simplicity & Robustness** rule under the technical lead mode guidelines.
+
+##### 2. Manual Verification
+- We verified the markdown file is parsed cleanly and successfully by the system.
+- Confirmed that the new instructions strictly balance the KISS/YAGNI principles with defensive error checking (Postel's Law) to avoid both over-engineering and weak hacks.
+
+#### Walkthrough: Exa MCP Server Configuration Correction
+
+We have successfully diagnosed and resolved the Exa MCP server `EOF` connection error by transitioning the API key propagation from HTTP headers to URL query parameters.
+
+##### 1. Configuration Realignment
+- **[MODIFY] [mcp_config.json (local)](file:///home/dnguyen029/antigravity-project/mcp_config.json)**:
+  - Updated the `exa` arguments array to append `?exaApiKey=$EXA_API_KEY&tools=web_search_exa,web_search_advanced_exa,web_fetch_exa` to the URL.
+- **[MODIFY] [mcp_config.json (global IDE)](file:///home/dnguyen029/.gemini/antigravity-ide/mcp_config.json)**:
+  - Synced the global IDE configuration with the local correction.
+
+##### 2. Connection Verification Handshake
+We executed the pre-flight connection verification script to confirm all servers report `🟢 CONNECTED`:
+- **Result**: **SUCCESS** (6/6 servers connected).
+
+##### 3. Manual Tool Execution Verification
+We created a diagnostic script ([`scratch/test_exa.py`](file:///home/dnguyen029/antigravity-project/scratch/test_exa.py)) to emulate a full `tools/call` JSON-RPC handshake.
+- **Result**: **SUCCESS** (Exa returns live search results cleanly under the updated configuration).
+
+## 📌 Walkthrough - Telephony & Sheets Fixes (Date: N/A | Match Score: 0.574)
 
 ### Walkthrough - Telephony & Sheets Fixes
 
@@ -67,122 +307,11 @@ Please test the line:
    - While asking about product specifications/dimensions, ask: *"Can you track my order?"* and verify it transfers you cleanly to the **WISMO Specialist**.
    - While entering your callback details for a representative callback, ask: *"Wait, can I just check my order status?"* and verify it redirects you to the **WISMO Specialist**.
 
-## 📌 Walkthrough - Antigravity IDE Diagnostics Audit (Date: N/A | Match Score: 0.606)
+## 📌 Test Valid Content (Date: N/A | Match Score: 0.573)
 
-### Walkthrough - Antigravity IDE Diagnostics Audit
+This is a valid conceptual lesson about caching strategies in Redis. It does not contain any state variables.
 
-An audit has been performed on the language server and renderer diagnostics report to identify, evaluate, and classify all reported warning and error signatures.
+## 📌 Test Lesson from IDE Agent (Date: N/A | Match Score: 0.569)
 
----
-
-#### 🔍 Audit Verification Summary
-
-All reported warnings and errors within [Antigravity IDE-diagnostics.txt](file:///home/dnguyen029/antigravity-project/Antigravity%20IDE-diagnostics.txt) were evaluated. They are confirmed to be non-fatal, harmless false-positives fully mitigated by existing environment mechanisms.
-
-| Identified Log Signature | Severity | Diagnostic Assessment & Root Cause | Mitigation / Resolution Status |
-| :--- | :---: | :--- | :--- |
-| `failed to check terminal shell support: internal: internal error` | 🟡 WARNING | Non-fatal artifact from the IDE's Go binary attempting to verify TTY capabilities when launching shells in non-interactive sandbox environments. | **Harmless False-Positive** - Standard execution is unaffected. |
-| `Failed to write server states, eagerly loading all tools: failed to get server directory` | 🟡 WARNING | Occurs during startup because the isolated container restricts desktop-level write permissions for direct caching paths. | **Handled Gracefully** - The IDE successfully falls back to eagerly loading all tool servers dynamically. |
-| `failed to resolve googleAgent config: neither PlanModel nor RequestedModel specified` | 🟡 WARNING | Temporary handshake artifact when the language server is initialized prior to client configuration details being pushed. | **Auto-Resolved** - Resolves automatically as soon as model parameters are synced from the client. |
-
----
-
-#### 🧪 Forensics & System Health Audit
-
-##### 1. Drift & Trajectory Forensics
-- Checked all system directories for corrupted trajectory (`.pb`) files.
-- All conversation files and implicit schemas are intact (none are truncated or zero bytes).
-- Analyzed `transcript.jsonl` step execution history. All interactions are confirmed to be linear, sequential, and free of runaway loops or context amnesia.
-
-##### 2. MCP Connection Check
-- Run command: `/home/dnguyen029/antigravity-project/.venv/bin/python3 app_build/verify_mcp_connections.py`
-- **Result**: **Passed**. All configured tool servers (Exa, Supabase, Toon-mcp, Context-mcp, and Google Conversational Agents) are verified as online and connected.
-
-## 📌 Walkthrough: Audit of MCP Configurations and Swarm Hook Refactoring (Date: N/A | Match Score: 0.606)
-
-### Walkthrough: Audit of MCP Configurations and Swarm Hook Refactoring
-
-We have completed the audit of the previous agent session logs, verified the status of the `context7`/`sequentialthinking` MCP servers, and successfully refactored the lifecycle hooks to stabilize the Swarm Live Execution Monitor.
-
-#### Changes Completed
-
-##### 1. Audit & Diagnostics
-- **MCP Configuration Verification**: Checked local and global `mcp_config.json` configurations.
-  - Confirmed `context7` is configured correctly.
-  - Confirmed `sequential-thinking` is omitted by design as it is a built-in.
-- **IDE Diagnostics Review**: Analyzed [Antigravity IDE-diagnostics.txt](file:///home/dnguyen029/antigravity-project/Antigravity%20IDE-diagnostics.txt).
-  - Confirmed that the language server and renderer logs contain no errors regarding `context7` or `sequential-thinking` MCP initialization.
-- **Root Cause Analysis (RCA)**: Diagnosed why the agent went loopy at the end of the previous session and compiled all findings into [analysis_results.md](file:///home/dnguyen029/.gemini/antigravity-ide/brain/5cd7c146-dc8d-4849-975d-187d5ad0a110/analysis_results.md).
-
-##### 2. Refactoring Hook Lifecycles
-- **Modified hooks.json**: Re-routed [sync_context.py](file:///home/dnguyen029/antigravity-project/.agents/hooks/sync_context.py) from `PostInvocation` to `PostToolUse` under the `dashboard-sync` block in [hooks.json](file:///home/dnguyen029/antigravity-project/.agents/hooks.json). This ensures the script receives the proper `toolCall` metadata payload.
-- **Preserved Swarm Transitions**: Modified [sync_context.py](file:///home/dnguyen029/antigravity-project/.agents/hooks/sync_context.py) to parse the existing [agent_live.md](file:///home/dnguyen029/antigravity-project/production_artifacts/agent_live.md) file via regex and preserve the current `Active Agent` (e.g., `Builder`, `Auditor`, `Orchestrator`), preventing the hooks from clobbering active agent state back to a hardcoded `"IDE Agent"`.
-- **Path Alignment**: Updated both [update_dashboard.py](file:///home/dnguyen029/antigravity-project/.agents/hooks/update_dashboard.py) and [sync_context.py](file:///home/dnguyen029/antigravity-project/.agents/hooks/sync_context.py) to write to the compliant [agent_live.md](file:///home/dnguyen029/antigravity-project/production_artifacts/agent_live.md) in the `production_artifacts/` partition instead of the root directory.
-- **Relocated Legacy Files**: Deleted the legacy `agent_live.md` from the project root and initialized the new one in [production_artifacts/agent_live.md](file:///home/dnguyen029/antigravity-project/production_artifacts/agent_live.md).
-- **Updated Hub Links**: Modified [dashboard.md](file:///home/dnguyen029/antigravity-project/dashboard.md) to redirect all system state links (`agent_live.md`, `task.md`, `walkthrough.md`, `system_status_report.md`) to their new locations in `production_artifacts/`.
-
----
-
-#### Verification Results
-
-##### 1. Script Executions
-- Verified that `update_dashboard.py` runs without exceptions and updates the phase to `🔍 Processing` in the compliant path.
-- Verified that `sync_context.py` successfully parses incoming tool payload parameters and updates the monitor.
-
-##### 2. Dashboard Integrity Checks
-- Confirmed that `production_artifacts/agent_live.md` successfully preserves the active agent state (`Builder`) during manual test executions.
-- Confirmed that the `Current Phase` updates dynamically with specific tool details (e.g., `Modifying File (mcp_config.json)`), completely resolving the `Executing None` clobbering bug.
-
-## 📌 Walkthrough — Supermemory connection audit and hardening (Date: N/A | Match Score: 0.602)
-
-### Walkthrough — Supermemory connection audit and hardening
-
-We have audited the Supermemory MCP connection, identified the underlying transport negotiation failure, applied the configuration and code fixes, and verified that all connections and prompts are 100% operational.
-
----
-
-#### Changes Implemented
-
-##### 1. Transport Strategy Optimization
-- **Location**: [mcp_config.json](file:///home/dnguyen029/antigravity-project/mcp_config.json) & [Global IDE mcp_config.json](file:///home/dnguyen029/.gemini/antigravity-ide/mcp_config.json)
-- **Change**: Appended the `--transport http-only` flag to the `supermemory` server configuration arguments. This forces the proxy client to skip the SSE transport negotiation which was causing Cloudflare/Supermemory to return a `400 Bad Request` or hang under `http-first`.
-
-##### 2. `context-mcp` Connection Resilience
-- **Location**: [context_mcp_server.py](file:///home/dnguyen029/antigravity-project/app_build/tools/context_mcp_server.py)
-- **Change**:
-  - Rewrote `get_supermemory_profile()` to use a 3-attempt retry sequence with exponential backoff (0s, 2s, 4s).
-  - Reduced individual query timeouts to a strict 15 seconds (rather than a monolithic 20 seconds) to ensure quick retries.
-  - Captured `stderr` outputs from the subprocess to allow diagnostic visibility in logs instead of silencing them.
-  - Added clean warning notifications and graceful degradation so that even if the remote server experiences downtime, the `lessons` prompt still serves Supabase records.
-
-##### 3. Pre-flight Verifier False-Positive Fix
-- **Location**: [verify_mcp_connections.py](file:///home/dnguyen029/antigravity-project/app_build/verify_mcp_connections.py)
-- **Change**: Added a post-handshake `resources/list` ping test specifically for `supermemory`. This prevents false positives by ensuring the connection can actually sustain request-response cycles, and maps failures to a `🟡 DEGRADED` state.
-
----
-
-#### Verification Results
-
-##### 1. Pre-flight Connection Audit
-- **Command run**: `/home/dnguyen029/antigravity-project/.venv/bin/python3 app_build/verify_mcp_connections.py`
-- **Result**: `🟢 CONNECTED` (Passed)
-- **Output**:
-  ```text
-  ==================================================
-  MCP CONNECTIONS VERIFICATION SUMMARY
-  ==================================================
-  Total Configured Servers: 6
-   Successfully (Connected): 6
-   Skipped:                  0
-   Failed:                   0
-  ==================================================
-  ```text
-
-##### 2. Context-mcp Lessons Prompt Test
-- **Command run**: `/home/dnguyen029/venv/bin/python -c 'import asyncio, sys; sys.path.append("/home/dnguyen029/antigravity-project/app_build/tools"); import context_mcp_server; print(asyncio.run(context_mcp_server.lessons()))'`
-- **Result**: **Success**. The output successfully fetched the active profile details, user stats, and system variables from Supermemory alongside the lessons learned from Supabase, in under 9 seconds with zero retries needed.
-
-## 📌 MCP Configuration & Diagnostics (Date: N/A | Match Score: 0.602)
-
-Resolved freeze in IDE right-side agent panel by fixing standard JSON syntax in mcp_config.json (removed trailing comma). Deprecated legacy filesystem MCP and removed all references from verify_mcp_connections.py. Cleared orphaned redis server background processes (PID 3905, 4070). All 4 remaining servers verified healthy.
+This is a test lesson verifying the new manual archive script and automated vector embedding calculation.
 

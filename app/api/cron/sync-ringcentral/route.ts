@@ -4,6 +4,8 @@ import {
   getPacificDateBounds, 
   getAccessToken, 
   aggregateCallLogs,
+  fetchExtensions,
+  fetchUserPhoneNumbers,
   type RingCentralCallLog,
   type RingCentralExtension 
 } from "@/lib/ringcentral";
@@ -45,53 +47,8 @@ export async function GET(request: Request) {
     const { dateFrom, dateTo } = getPacificDateBounds(targetDate);
     const accessToken = await getAccessToken(server, clientId, clientSecret, jwt);
 
-    // Fetch extensions
-    const extUrl = `${server}/restapi/v1.0/account/~/extension?status=Enabled&perPage=50`;
-    const extRes = await fetch(extUrl, {
-      headers: {
-        "Authorization": `Bearer ${accessToken}`,
-        "Accept": "application/json"
-      },
-      cache: "no-store"
-    });
-
-    if (!extRes.ok) {
-      throw new Error(`Failed to fetch extensions: ${extRes.statusText}`);
-    }
-
-    const extData = await extRes.json();
-    const recordsList: RingCentralExtension[] = extData.records || [];
-
-    // Fetch account phone numbers
-    const userPhoneNumbers = new Set<string>();
-    try {
-      const pnUrl = `${server}/restapi/v1.0/account/~/phone-number?perPage=100`;
-      const pnRes = await fetch(pnUrl, {
-        headers: {
-          "Authorization": `Bearer ${accessToken}`,
-          "Accept": "application/json"
-        },
-        cache: "no-store"
-      });
-      if (pnRes.ok) {
-        const pnData = await pnRes.json();
-        const pns = pnData.records || [];
-        pns.forEach((p: { phoneNumber?: string; extension?: { id: string | number; extensionNumber: string } }) => {
-          const ext = p.extension;
-          if (ext) {
-            const extRecord = recordsList.find((r: RingCentralExtension) => 
-              String(r.id) === String(ext.id) || 
-              String(r.extensionNumber) === String(ext.extensionNumber)
-            );
-            if (extRecord && extRecord.type === "User" && p.phoneNumber) {
-              userPhoneNumbers.add(p.phoneNumber);
-            }
-          }
-        });
-      }
-    } catch (pnErr) {
-      console.error("Failed to fetch phone number mapping during cron:", pnErr);
-    }
+    const recordsList = await fetchExtensions(server, accessToken);
+    const userPhoneNumbers = await fetchUserPhoneNumbers(server, accessToken, recordsList);
 
     // Fetch Call Logs (Paginated)
     let logs: RingCentralCallLog[] = [];
@@ -141,6 +98,35 @@ export async function GET(request: Request) {
 
     if (dbErr) {
       throw new Error(`Supabase DB Write Error: ${dbErr.message}`);
+    }
+
+    // Prepare hourly records for insertion
+    const hourlyRecords = [];
+    for (let hour = 0; hour < 24; hour++) {
+      const inbound = metrics.hourlyVolume[hour] || 0;
+      const answered = metrics.hourlyAnswered[hour] || 0;
+      const missed = metrics.hourlyMissed[hour] || 0;
+      // Estimate abandoned calls per hour
+      const totalEstimated = answered + missed;
+      const abandoned = inbound > totalEstimated ? inbound - totalEstimated : 0;
+
+      hourlyRecords.push({
+        call_date: targetDate,
+        hour_of_day: hour,
+        inbound_calls: inbound,
+        answered_calls: answered,
+        missed_calls: missed,
+        abandoned_calls: abandoned
+      });
+    }
+
+    // Upsert into Supabase hourly_call_telemetry
+    const { error: hourlyDbErr } = await supabase
+      .from("hourly_call_telemetry")
+      .upsert(hourlyRecords, { onConflict: "call_date,hour_of_day" });
+
+    if (hourlyDbErr) {
+      console.error("Hourly telemetry sync failed:", hourlyDbErr);
     }
 
     return NextResponse.json({

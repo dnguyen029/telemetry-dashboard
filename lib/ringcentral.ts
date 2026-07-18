@@ -199,3 +199,128 @@ export function aggregateCallLogs(
     hourlyMissed
   };
 }
+
+export async function getAgentPresenceCounts(
+  server: string,
+  accessToken: string
+): Promise<{ online: number; onCall: number; available: number; dnd: number; offline: number }> {
+  const presenceUrl = `${server}/restapi/v1.0/account/~/presence?perPage=100`;
+  const res = await fetch(presenceUrl, {
+    headers: {
+      "Authorization": `Bearer ${accessToken}`,
+      "Accept": "application/json"
+    },
+    cache: "no-store"
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to fetch batch presence: ${res.statusText}`);
+  }
+
+  const data = await res.json();
+  const records = data.records || [];
+
+  let online = 0;
+  let onCall = 0;
+  let available = 0;
+  let dnd = 0;
+  let offline = 0;
+
+  records.forEach((r: any) => {
+    const pStatus = r.presenceStatus;
+    const tStatus = r.telephonyStatus;
+
+    if (tStatus === "CallConnected" || tStatus === "Ringing") {
+      onCall++;
+      online++;
+    } else if (pStatus === "Available") {
+      available++;
+      online++;
+    } else if (pStatus === "Busy" || pStatus === "DND") {
+      dnd++;
+      online++;
+    } else {
+      offline++;
+    }
+  });
+
+  return { online, onCall, available, dnd, offline };
+}
+
+export async function getActiveQueueCount(
+  server: string,
+  accessToken: string
+): Promise<number> {
+  const activeCallsUrl = `${server}/restapi/v1.0/account/~/active-calls?direction=Inbound&view=Simple`;
+  const res = await fetch(activeCallsUrl, {
+    headers: {
+      "Authorization": `Bearer ${accessToken}`,
+      "Accept": "application/json"
+    },
+    cache: "no-store"
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to fetch active calls: ${res.statusText}`);
+  }
+
+  const data = await res.json();
+  const records = data.records || [];
+
+  return records.filter((c: any) => c.telephonyStatus === "Ringing").length;
+}
+
+export async function fetchExtensions(
+  server: string,
+  accessToken: string
+): Promise<RingCentralExtension[]> {
+  const extUrl = `${server}/restapi/v1.0/account/~/extension?status=Enabled&perPage=50`;
+  const res = await fetch(extUrl, {
+    headers: {
+      "Authorization": `Bearer ${accessToken}`,
+      "Accept": "application/json"
+    },
+    cache: "no-store"
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to fetch extensions: ${res.statusText}`);
+  }
+
+  const extData = await res.json();
+  return extData.records || [];
+}
+
+export async function fetchUserPhoneNumbers(
+  server: string,
+  accessToken: string,
+  recordsList: RingCentralExtension[]
+): Promise<Set<string>> {
+  const userPhoneNumbers = new Set<string>();
+  const pnUrl = `${server}/restapi/v1.0/account/~/phone-number?perPage=100`;
+  const pnRes = await fetch(pnUrl, {
+    headers: {
+      "Authorization": `Bearer ${accessToken}`,
+      "Accept": "application/json"
+    },
+    cache: "no-store"
+  });
+
+  if (pnRes.ok) {
+    const pnData = await pnRes.json();
+    const pns = pnData.records || [];
+    pns.forEach((p: { phoneNumber?: string; extension?: { id: string | number; extensionNumber: string } }) => {
+      const ext = p.extension;
+      if (ext) {
+        const extRecord = recordsList.find((r: RingCentralExtension) => 
+          String(r.id) === String(ext.id) || 
+          String(r.extensionNumber) === String(ext.extensionNumber)
+        );
+        if (extRecord && extRecord.type === "User" && p.phoneNumber) {
+          userPhoneNumbers.add(p.phoneNumber);
+        }
+      }
+    });
+  }
+  return userPhoneNumbers;
+}

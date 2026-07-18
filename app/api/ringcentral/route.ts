@@ -4,6 +4,10 @@ import {
   getPacificDateBounds, 
   getAccessToken, 
   aggregateCallLogs,
+  fetchExtensions,
+  fetchUserPhoneNumbers,
+  getAgentPresenceCounts,
+  getActiveQueueCount,
   type RingCentralCallLog,
   type RingCentralExtension 
 } from "@/lib/ringcentral";
@@ -93,54 +97,15 @@ export async function GET(request: Request) {
   try {
     const accessToken = await getAccessToken(server, clientId, clientSecret, jwt);
     
-    // Fetch extensions to see active counts
-    const extUrl = `${server}/restapi/v1.0/account/~/extension?status=Enabled&perPage=50`;
-    const extRes = await fetch(extUrl, {
-      headers: {
-        "Authorization": `Bearer ${accessToken}`,
-        "Accept": "application/json"
-      },
-      cache: "no-store"
-    });
+    // Query extensions, queue status, and presence counts concurrently
+    const [recordsList, activeQueueCount, presenceCounts] = await Promise.all([
+      fetchExtensions(server, accessToken),
+      getActiveQueueCount(server, accessToken),
+      getAgentPresenceCounts(server, accessToken)
+    ]);
 
-    let enabledUserCount = 21; // Default fallback
-    let recordsList: RingCentralExtension[] = [];
-    if (extRes.ok) {
-      const extData = await extRes.json();
-      recordsList = extData.records || [];
-      enabledUserCount = recordsList.filter((r: RingCentralExtension) => r.type === "User" || r.type === "Department").length;
-    }
-
-    // Fetch account phone numbers
-    const userPhoneNumbers = new Set<string>();
-    try {
-      const pnUrl = `${server}/restapi/v1.0/account/~/phone-number?perPage=100`;
-      const pnRes = await fetch(pnUrl, {
-        headers: {
-          "Authorization": `Bearer ${accessToken}`,
-          "Accept": "application/json"
-        },
-        cache: "no-store"
-      });
-      if (pnRes.ok) {
-        const pnData = await pnRes.json();
-        const pns = pnData.records || [];
-        pns.forEach((p: { phoneNumber?: string; extension?: { id: string | number; extensionNumber: string } }) => {
-          const ext = p.extension;
-          if (ext) {
-            const extRecord = recordsList.find((r: RingCentralExtension) => 
-              String(r.id) === String(ext.id) || 
-              String(r.extensionNumber) === String(ext.extensionNumber)
-            );
-            if (extRecord && extRecord.type === "User" && p.phoneNumber) {
-              userPhoneNumbers.add(p.phoneNumber);
-            }
-          }
-        });
-      }
-    } catch (pnErr) {
-      console.error("Failed to fetch phone number mapping:", pnErr);
-    }
+    const enabledUserCount = recordsList.filter((r: RingCentralExtension) => r.type === "User" || r.type === "Department").length;
+    const userPhoneNumbers = await fetchUserPhoneNumbers(server, accessToken, recordsList);
 
     // Fetch Call Logs
     let logs: RingCentralCallLog[] = [];
@@ -174,6 +139,81 @@ export async function GET(request: Request) {
     }
 
     const metrics = aggregateCallLogs(logs, recordsList, userPhoneNumbers);
+
+    // Fetch real historical trends for the dashboard from Supabase
+    let dbHotspot: number[][] | undefined = undefined;
+    let dbDailyTrends: any[] | undefined = undefined;
+    let dbSparklines: any | undefined = undefined;
+
+    try {
+      const { data: hourlyData } = await supabase
+        .from("hourly_call_telemetry")
+        .select("call_date, hour_of_day, inbound_calls")
+        .gte("call_date", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0])
+        .order("call_date", { ascending: true })
+        .order("hour_of_day", { ascending: true });
+
+      if (hourlyData && hourlyData.length > 0) {
+        const grid = Array.from({ length: 7 }, () => Array(24).fill(0));
+        hourlyData.forEach(row => {
+          const dateObj = new Date(row.call_date);
+          const dayIdx = (dateObj.getDay() + 6) % 7; // Monday = 0, Sunday = 6
+          const hour = row.hour_of_day;
+          if (hour >= 0 && hour < 24) {
+            grid[dayIdx][hour] += row.inbound_calls || 0;
+          }
+        });
+        dbHotspot = grid;
+      }
+
+      const { data: dailyData } = await supabase
+        .from("daily_call_telemetry")
+        .select("date, inbound_calls, answered_calls, missed_calls")
+        .order("date", { ascending: false })
+        .limit(7);
+
+      if (dailyData && dailyData.length > 0) {
+        const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        dbDailyTrends = dailyData.map(row => {
+          const dateObj = new Date(row.date);
+          return {
+            day: days[dateObj.getDay()],
+            inbound: row.inbound_calls || 0,
+            answered: row.answered_calls || 0,
+            missed: row.missed_calls || 0
+          };
+        }).reverse();
+      }
+
+      const { data: sparklineData } = await supabase
+        .from("daily_call_telemetry")
+        .select("inbound_calls, answered_calls, missed_calls, abandoned_calls, avg_wait_seconds")
+        .order("date", { ascending: false })
+        .limit(12);
+
+      if (sparklineData && sparklineData.length > 0) {
+        const reversed = [...sparklineData].reverse();
+        const inbound = reversed.map(r => r.inbound_calls || 0);
+        const answered = reversed.map(r => r.answered_calls || 0);
+        const missed = reversed.map(r => r.missed_calls || 0);
+        const abandoned = reversed.map(r => r.abandoned_calls || 0);
+        const answerRate = reversed.map(r => r.inbound_calls > 0 ? Math.round((r.answered_calls / r.inbound_calls) * 100) : 0);
+        const missedRate = reversed.map(r => r.inbound_calls > 0 ? Math.round((r.missed_calls / r.inbound_calls) * 100) : 0);
+        const abandonRate = reversed.map(r => r.inbound_calls > 0 ? Math.round((r.abandoned_calls / r.inbound_calls) * 100) : 0);
+
+        dbSparklines = {
+          inbound,
+          answered,
+          missed,
+          abandoned,
+          answerRate,
+          missedRate,
+          abandonRate
+        };
+      }
+    } catch (dbErr) {
+      console.error("Failed to query DB for chart data:", dbErr);
+    }
 
     // Calculate Dynamic Capacity Window
     let shiftSeconds = 36000; // 10 hours for past days
@@ -321,8 +361,8 @@ export async function GET(request: Request) {
       metrics.missedCalls,
       metrics.abandonedCalls,
       metrics.avgWaitSeconds,
-      Math.floor(Math.random() * 4) + 1,
-      Math.max(3, enabledUserCount - 15),
+      activeQueueCount,
+      presenceCounts.online,
       extensions,
       metrics.hourlyVolume,
       metrics.hourlyAnswered,
@@ -332,7 +372,10 @@ export async function GET(request: Request) {
       comparisonStatus,
       undefined,
       occupancyRate,
-      missedCallsList
+      missedCallsList,
+      dbHotspot,
+      dbDailyTrends,
+      dbSparklines
     );
 
     // Upsert Cache
@@ -485,7 +528,10 @@ function buildAnalyticsPayload(
   comparisonStatus: "live" | "insufficient_data",
   info?: string,
   agentOccupancy?: number,
-  missedCallsList: { id: string; startTime: string; fromName: string; fromNumber: string; toName: string; toNumber: string; duration: number; result: string }[] = []
+  missedCallsList: { id: string; startTime: string; fromName: string; fromNumber: string; toName: string; toNumber: string; duration: number; result: string }[] = [],
+  dbHotspot?: number[][],
+  dbDailyTrends?: any[],
+  dbSparklines?: any
 ) {
   const formatHourLabel = (h: number) => {
     if (h === 0) return "12 AM";
@@ -505,7 +551,7 @@ function buildAnalyticsPayload(
     };
   });
 
-  const hotspotData = Array.from({ length: 7 }, (_, dayIdx) => {
+  const hotspotData = dbHotspot || Array.from({ length: 7 }, (_, dayIdx) => {
     const isWeekend = dayIdx === 5 || dayIdx === 6;
     return Array.from({ length: 24 }, (_, hour) => {
       if (isWeekend) return Math.random() > 0.85 ? Math.floor(Math.random() * 2) : 0;
@@ -542,7 +588,7 @@ function buildAnalyticsPayload(
     orderedDays.push(days[idx === 0 ? 6 : idx - 1]);
   }
 
-  const dailyTrends = orderedDays.map((day, idx) => {
+  const dailyTrends = dbDailyTrends || orderedDays.map((day, idx) => {
     const ratio = idx === 6 ? 1 : 0.8 + Math.random() * 0.4;
     const inbound = Math.round(totalCallsToday * ratio);
     const missed = Math.round(missedCalls * ratio);
@@ -554,7 +600,7 @@ function buildAnalyticsPayload(
     };
   });
 
-  const sparklines = {
+  const sparklines = dbSparklines || {
     inbound: Array.from({ length: 12 }, () => Math.floor(totalCallsToday * (0.85 + Math.random() * 0.3))),
     answered: Array.from({ length: 12 }, () => Math.floor(answeredCalls * (0.85 + Math.random() * 0.3))),
     missed: Array.from({ length: 12 }, () => Math.floor(missedCalls * (0.8 + Math.random() * 0.4))),
