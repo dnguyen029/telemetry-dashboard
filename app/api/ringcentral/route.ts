@@ -7,27 +7,39 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Dynamic timezone helper to compute Pacific date bounds as UTC ISO strings
 function getPacificDateBounds(dateStr?: string) {
-  if (dateStr && !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-    throw new Error("Invalid date format. Expected YYYY-MM-DD");
+  let year: number;
+  let month: number;
+  let day: number;
+
+  if (dateStr) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      throw new Error("Invalid date format. Expected YYYY-MM-DD");
+    }
+    const parts = dateStr.split("-");
+    year = parseInt(parts[0], 10);
+    month = parseInt(parts[1], 10) - 1; // 0-indexed
+    day = parseInt(parts[2], 10);
+  } else {
+    // Get current date in Pacific Time
+    const laDateStr = new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+    const parts = laDateStr.split("-");
+    year = parseInt(parts[0], 10);
+    month = parseInt(parts[1], 10) - 1;
+    day = parseInt(parts[2], 10);
   }
 
-  const now = new Date();
-  const dateToUse = dateStr ? new Date(`${dateStr}T12:00:00`) : now;
+  // Calculate PDT/PST offset for the target date using Intl.DateTimeFormat (timezone-independent)
+  const date = new Date(Date.UTC(year, month, day, 12, 0, 0));
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Los_Angeles",
+    hour: "numeric",
+    hour12: false
+  });
+  const laHour = parseInt(formatter.format(date), 10);
+  const diffHours = laHour - 12; // always evaluates to -7 or -8 depending on DST
 
-  // Compute offset difference between UTC and target timezone representation
-  const utcDate = new Date(dateToUse.toLocaleString("en-US", { timeZone: "UTC" }));
-  const pacDate = new Date(dateToUse.toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
-  const offsetMs = pacDate.getTime() - utcDate.getTime();
-
-  // Find Pacific Midnight in local representation, then shift back to absolute UTC
-  const pacMidnight = new Date(dateToUse.getTime() + offsetMs);
-  pacMidnight.setUTCHours(0, 0, 0, 0);
-  const dateFrom = new Date(pacMidnight.getTime() - offsetMs).toISOString();
-
-  // Find Pacific End of Day (23:59:59.999) in local representation, shift back to absolute UTC
-  const pacEndOfDay = new Date(dateToUse.getTime() + offsetMs);
-  pacEndOfDay.setUTCHours(23, 59, 59, 999);
-  const dateTo = new Date(pacEndOfDay.getTime() - offsetMs).toISOString();
+  const dateFrom = new Date(Date.UTC(year, month, day, -diffHours, 0, 0, 0)).toISOString();
+  const dateTo = new Date(Date.UTC(year, month, day, -diffHours + 23, 59, 59, 999)).toISOString();
 
   const todayLA = new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
   const isTodayDate = !dateStr || dateStr === todayLA;
