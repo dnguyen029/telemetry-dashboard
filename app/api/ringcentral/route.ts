@@ -20,29 +20,19 @@ function getPacificDateBounds(dateStr?: string) {
     month = parseInt(parts[1], 10) - 1; // 0-indexed
     day = parseInt(parts[2], 10);
   } else {
-    // Get current date in Pacific Time
-    const laDateStr = new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
-    const parts = laDateStr.split("-");
-    year = parseInt(parts[0], 10);
-    month = parseInt(parts[1], 10) - 1;
-    day = parseInt(parts[2], 10);
+    // Get current date in UTC Time
+    const utcDate = new Date();
+    year = utcDate.getUTCFullYear();
+    month = utcDate.getUTCMonth();
+    day = utcDate.getUTCDate();
   }
 
-  // Calculate PDT/PST offset for the target date using Intl.DateTimeFormat (timezone-independent)
-  const date = new Date(Date.UTC(year, month, day, 12, 0, 0));
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Los_Angeles",
-    hour: "numeric",
-    hour12: false
-  });
-  const laHour = parseInt(formatter.format(date), 10);
-  const diffHours = laHour - 12; // always evaluates to -7 or -8 depending on DST
+  // UTC Midnight boundaries
+  const dateFrom = new Date(Date.UTC(year, month, day, 0, 0, 0, 0)).toISOString();
+  const dateTo = new Date(Date.UTC(year, month, day, 23, 59, 59, 999)).toISOString();
 
-  const dateFrom = new Date(Date.UTC(year, month, day, -diffHours, 0, 0, 0)).toISOString();
-  const dateTo = new Date(Date.UTC(year, month, day, -diffHours + 23, 59, 59, 999)).toISOString();
-
-  const todayLA = new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
-  const isTodayDate = !dateStr || dateStr === todayLA;
+  const todayUTC = new Date().toISOString().split("T")[0];
+  const isTodayDate = !dateStr || dateStr === todayUTC;
 
   return { dateFrom, dateTo, isToday: isTodayDate };
 }
