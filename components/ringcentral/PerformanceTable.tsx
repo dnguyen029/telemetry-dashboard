@@ -72,23 +72,34 @@ function MetricRow({ label, cur, prev, change, pct, sparkData, color, isRate = f
 }
 
 interface PerformanceTableProps {
-  comparisonData: any;
-  sparklines: any;
+  comparisonData: Record<
+    string,
+    Record<string, { current: number; previous: number; change: number; pct: number }>
+  >;
+  sparklines: Record<string, number[]>;
   period: "DoD" | "WoW" | "MoM" | "QoQ";
   setPeriod: (p: "DoD" | "WoW" | "MoM" | "QoQ") => void;
   onMetricClick?: (metricName: string) => void;
+  dataStatus?: "live" | "insufficient_data";
 }
 
-export default function PerformanceTable({ comparisonData, sparklines, period, setPeriod, onMetricClick }: PerformanceTableProps) {
+export default function PerformanceTable({ comparisonData, sparklines, period, setPeriod, onMetricClick, dataStatus }: PerformanceTableProps) {
   const activeData = comparisonData[period];
   if (!activeData) return null;
 
   return (
     <div className="p-6 rounded-xl glass-card shadow-sm space-y-4">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-gray-250/20 pb-3.5">
-        <div>
-          <h5 className="font-display font-bold text-text-primary text-sm">Call Performance Comparison</h5>
-          <p className="text-[11px] text-text-secondary mt-0.5">Statistical metrics comparing current vs historical period</p>
+        <div className="space-y-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h5 className="font-display font-bold text-text-primary text-sm">Call Performance Comparison</h5>
+            {dataStatus === "insufficient_data" && (
+              <span className="px-2 py-0.5 text-[9px] font-semibold font-mono bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200/50 dark:border-amber-900/30 rounded-full flex items-center gap-1 select-none">
+                <span>⚠</span> Simulated — Building history
+              </span>
+            )}
+          </div>
+          <p className="text-[11px] text-text-secondary">Statistical metrics comparing current vs historical period</p>
         </div>
         <div className="flex bg-slate-100 dark:bg-slate-900 p-0.5 rounded-lg border border-slate-200 dark:border-slate-800 shrink-0">
           {(["DoD", "WoW", "MoM", "QoQ"] as const).map((p) => (

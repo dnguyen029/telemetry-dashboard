@@ -1,86 +1,54 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { 
+  getPacificDateBounds, 
+  getAccessToken, 
+  aggregateCallLogs,
+  type RingCentralCallLog,
+  type RingCentralExtension 
+} from "@/lib/ringcentral";
 
 const supabaseUrl = process.env.SUPABASE_URL!;
 const supabaseKey = process.env.SUPABASE_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Dynamic timezone helper to compute Pacific date bounds as UTC ISO strings
-function getPacificDateBounds(dateStr?: string) {
-  let year: number;
-  let month: number;
-  let day: number;
+const CACHE_TTL_SECONDS = 30; // 30s cache TTL for live dashboard
 
-  if (dateStr) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-      throw new Error("Invalid date format. Expected YYYY-MM-DD");
-    }
-    const parts = dateStr.split("-");
-    year = parseInt(parts[0], 10);
-    month = parseInt(parts[1], 10) - 1; // 0-indexed
-    day = parseInt(parts[2], 10);
-  } else {
-    // Get current date in UTC Time
-    const utcDate = new Date();
-    year = utcDate.getUTCFullYear();
-    month = utcDate.getUTCMonth();
-    day = utcDate.getUTCDate();
-  }
-
-  // UTC Midnight boundaries
-  const dateFrom = new Date(Date.UTC(year, month, day, 0, 0, 0, 0)).toISOString();
-  const dateTo = new Date(Date.UTC(year, month, day, 23, 59, 59, 999)).toISOString();
-
-  const todayUTC = new Date().toISOString().split("T")[0];
-  const isTodayDate = !dateStr || dateStr === todayUTC;
-
-  return { dateFrom, dateTo, isToday: isTodayDate };
-}
-
-
-async function getAccessToken(server: string, clientId: string, clientSecret: string, jwt: string): Promise<string> {
-  const tokenUrl = `${server}/restapi/oauth/token`;
-  const authHeader = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
-  
-  const res = await fetch(tokenUrl, {
-    method: "POST",
-    headers: {
-      "Authorization": `Basic ${authHeader}`,
-      "Content-Type": "application/x-www-form-urlencoded"
-    },
-    body: new URLSearchParams({
-      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-      assertion: jwt
-    }),
-    cache: "no-store"
-  });
-
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`Authentication failed: ${errText}`);
-  }
-
-  const data = await res.json();
-  return data.access_token;
+// Type helper for RPC results
+interface PeriodComparisonRow {
+  current_inbound: string;
+  previous_inbound: string;
+  current_answered: string;
+  previous_answered: string;
+  current_missed: string;
+  previous_missed: string;
+  current_abandoned: string;
+  previous_abandoned: string;
+  current_avg_wait: number;
+  previous_avg_wait: number;
+  pct_inbound: number;
+  pct_answered: number;
+  pct_missed: number;
+  pct_abandoned: number;
+  rows_available: number;
 }
 
 export async function GET(request: Request) {
-  // Parse date query parameter
   const { searchParams } = new URL(request.url);
   const dateParam = searchParams.get("date") || undefined;
 
   let bounds;
   try {
     bounds = getPacificDateBounds(dateParam);
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 400 });
+  } catch (e: unknown) {
+    return NextResponse.json({ error: (e as Error).message }, { status: 400 });
   }
 
   const { dateFrom, dateTo, isToday } = bounds;
   const formattedDate = dateParam || new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
   
   const CACHE_ID = `ringcentral_metrics_${formattedDate}`;
-  const CACHE_TTL_SECONDS = isToday ? 30 : 31536000; // 30s for today, 1 year for past days
+  const CACHE_TTL = isToday ? CACHE_TTL_SECONDS : 31536000; // 1 year for past days
 
   // 1. Attempt Cache Lookup in Supabase
   try {
@@ -91,9 +59,9 @@ export async function GET(request: Request) {
       .single();
 
     if (!cacheErr && cacheRow) {
-      const ageSeconds = (Date.now() - new Date(cacheRow.updated_at).getTime()) / 1000;
-      if (ageSeconds < CACHE_TTL_SECONDS) {
-        return NextResponse.json({ ...cacheRow.data, cached: true });
+      const ageSeconds = (Date.now() - new Date((cacheRow as { updated_at: string }).updated_at).getTime()) / 1000;
+      if (ageSeconds < CACHE_TTL) {
+        return NextResponse.json({ ...(cacheRow as { data: Record<string, unknown> }).data, cached: true });
       }
     }
   } catch (err) {
@@ -105,7 +73,7 @@ export async function GET(request: Request) {
   const jwt = process.env.RINGCENTRAL_JWT;
   const server = process.env.RINGCENTRAL_SERVER_URL || "https://platform.ringcentral.com";
 
-  // If credentials are not set, return simulated live metrics as a fallback
+  // If credentials are not set, return simulated metrics
   if (!clientId || !clientSecret || !jwt) {
     const mockData = getMockData("Missing RingCentral API keys in environment config.");
     try {
@@ -135,15 +103,15 @@ export async function GET(request: Request) {
       cache: "no-store"
     });
 
-    let enabledUserCount = 21; // Default fallback from May audit
-    let recordsList: any[] = [];
+    let enabledUserCount = 21; // Default fallback
+    let recordsList: RingCentralExtension[] = [];
     if (extRes.ok) {
       const extData = await extRes.json();
       recordsList = extData.records || [];
-      enabledUserCount = recordsList.filter((r: any) => r.type === "User" || r.type === "Department").length;
+      enabledUserCount = recordsList.filter((r: RingCentralExtension) => r.type === "User" || r.type === "Department").length;
     }
 
-    // Fetch all account phone numbers to map DIDs assigned to User extensions
+    // Fetch account phone numbers
     const userPhoneNumbers = new Set<string>();
     try {
       const pnUrl = `${server}/restapi/v1.0/account/~/phone-number?perPage=100`;
@@ -157,25 +125,25 @@ export async function GET(request: Request) {
       if (pnRes.ok) {
         const pnData = await pnRes.json();
         const pns = pnData.records || [];
-        pns.forEach((p: any) => {
+        pns.forEach((p: { phoneNumber?: string; extension?: { id: string | number; extensionNumber: string } }) => {
           const ext = p.extension;
           if (ext) {
-            const extRecord = recordsList.find((r: any) => 
+            const extRecord = recordsList.find((r: RingCentralExtension) => 
               String(r.id) === String(ext.id) || 
               String(r.extensionNumber) === String(ext.extensionNumber)
             );
-            if (extRecord && extRecord.type === "User") {
-              if (p.phoneNumber) userPhoneNumbers.add(p.phoneNumber);
+            if (extRecord && extRecord.type === "User" && p.phoneNumber) {
+              userPhoneNumbers.add(p.phoneNumber);
             }
           }
         });
       }
     } catch (pnErr) {
-      console.error("Failed to fetch account phone numbers mapping:", pnErr);
+      console.error("Failed to fetch phone number mapping:", pnErr);
     }
 
-    // 2. Fetch Call Logs with Dynamic Midnight Range & Pagination
-    let logs: any[] = [];
+    // Fetch Call Logs
+    let logs: RingCentralCallLog[] = [];
     let page = 1;
     let hasMore = true;
     const perPage = 1000;
@@ -205,88 +173,7 @@ export async function GET(request: Request) {
       }
     }
 
-    // Filter logs for Inbound Queue/Support Calls only (exclude direct calls to agent personal extensions)
-    const userNames = recordsList.filter((r: any) => r.type === "User").map((r: any) => r.name);
-    const userExts = recordsList.filter((r: any) => r.type === "User").map((r: any) => r.extensionNumber);
-
-    const queueLogs = logs.filter((l: any) => {
-      // 1. Double check direction is Inbound
-      if (l.direction !== "Inbound") return false;
-      // 2. Must not be direct to an agent (check name, extension, and direct phone number)
-      const isDirectToAgent = 
-        userNames.includes(l.to?.name) || 
-        userExts.includes(l.to?.extensionNumber) ||
-        (l.to?.phoneNumber && userPhoneNumbers.has(l.to.phoneNumber));
-      return !isDirectToAgent;
-    });
-
-    let totalCallsToday = queueLogs.length;
-    let missedCalls = 0;
-    let answeredCalls = 0;
-    let avgWaitSeconds = 48;
-    let abandonedCalls = 0;
-    let hourlyVolume = Array(24).fill(0);
-    let hourlyAnswered = Array(24).fill(0);
-    let hourlyMissed = Array(24).fill(0);
-
-    const missedResultStatuses = ["Missed", "No Answer", "Not Answered", "Declined", "Sent to Voicemail", "Voicemail"];
-    const abandonedResultStatuses = ["Abandoned", "Hang Up", "Disconnected"];
-
-    const isAcceptedCall = (log: any) => log.result === "Accepted" || log.result === "Call connected";
-    const isMissedStatusCall = (log: any) => missedResultStatuses.includes(log.result) || log.action === "Missed";
-
-    // 1. Answered: Accepted connection with duration >= 45s (agent conversation)
-    answeredCalls = queueLogs.filter((l: any) => {
-      return isAcceptedCall(l) && (l.duration || 0) >= 45;
-    }).length;
-
-    // 2. Abandoned: Explicit hang-up, OR any call (accepted/missed) under 9s (IVR drops)
-    abandonedCalls = queueLogs.filter((l: any) => {
-      const isExplicitAbandon = abandonedResultStatuses.includes(l.result);
-      const isShortAccepted = isAcceptedCall(l) && (l.duration || 0) <= 8;
-      const isShortMissed = isMissedStatusCall(l) && (l.duration || 0) <= 8;
-      return isExplicitAbandon || isShortAccepted || isShortMissed;
-    }).length;
-
-    // 3. Missed: Unanswered status with duration >= 9s (rings through to VM or timeout)
-    missedCalls = queueLogs.filter((l: any) => {
-      return isMissedStatusCall(l) && (l.duration || 0) >= 9;
-    }).length;
-
-    // Estimate wait time: missed/abandoned duration is exact wait time, answered calls have an average wait time of ~20s
-    const waitTimes = queueLogs.map((l: any) => {
-      const isAns = isAcceptedCall(l) && (l.duration || 0) >= 45;
-      if (isAns) {
-        return 15 + ((l.duration || 0) % 20); // Simulated wait time between 15-35s
-      }
-      return Math.min(l.duration || 15, 120); // Capped at 120s for hangups
-    });
-    if (waitTimes.length > 0) {
-      avgWaitSeconds = Math.round(waitTimes.reduce((a: number, b: number) => a + b, 0) / waitTimes.length);
-    }
-
-    // Populate hourly volume from live startTimes
-    queueLogs.forEach((log: any) => {
-      if (log.startTime) {
-        const hour = new Date(log.startTime).getHours();
-        if (hour >= 0 && hour < 24) {
-          const isAns = isAcceptedCall(log) && (log.duration || 0) >= 45;
-          const isMiss = isMissedStatusCall(log) && (log.duration || 0) >= 9;
-          const isAban = abandonedResultStatuses.includes(log.result) || 
-                         (isAcceptedCall(log) && (log.duration || 0) <= 8) ||
-                         (isMissedStatusCall(log) && (log.duration || 0) <= 8);
-          
-          if (isAns || isMiss || isAban) {
-            hourlyVolume[hour]++;
-            if (isMiss || isAban) {
-              hourlyMissed[hour]++;
-            } else {
-              hourlyAnswered[hour]++;
-            }
-          }
-        }
-      }
-    });
+    const metrics = aggregateCallLogs(logs, recordsList, userPhoneNumbers);
 
     // Calculate Dynamic Capacity Window
     let shiftSeconds = 36000; // 10 hours for past days
@@ -298,16 +185,15 @@ export async function GET(request: Request) {
       shiftSeconds = Math.max(3600, Math.min(36000, elapsed)); // clamp between 1 and 10 hours
     }
 
-    const extensions = recordsList.map((r: any) => {
-      // Find answered calls for this extension
-      const agentLogs = logs.filter((l: any) => {
-        const isAnswered = !missedResultStatuses.includes(l.result) && !abandonedResultStatuses.includes(l.result);
+    // Occupancy calculation for all extensions (no slice)
+    const missedResultStatuses = ["Missed", "No Answer", "Not Answered", "Declined", "Sent to Voicemail", "Voicemail"];
+    const extensions = recordsList.map((r: RingCentralExtension) => {
+      const agentLogs = logs.filter((l: RingCentralCallLog) => {
+        const isAnswered = !missedResultStatuses.includes(l.result) && l.result !== "Abandoned" && l.result !== "Hang Up";
         if (!isAnswered) return false;
-        const matchTo = l.to?.extensionNumber === r.extensionNumber;
-        const matchFrom = l.from?.extensionNumber === r.extensionNumber;
-        return matchTo || matchFrom;
+        return l.to?.extensionNumber === r.extensionNumber || l.from?.extensionNumber === r.extensionNumber;
       });
-      const agentTalkTime = agentLogs.reduce((acc: number, log: any) => acc + (log.duration || 0), 0);
+      const agentTalkTime = agentLogs.reduce((acc: number, log: RingCentralCallLog) => acc + (log.duration || 0), 0);
       const agentOccupancy = Math.min(100, Math.round((agentTalkTime / shiftSeconds) * 100));
 
       return {
@@ -318,24 +204,20 @@ export async function GET(request: Request) {
         status: r.status,
         occupancy: agentOccupancy
       };
-    }).slice(0, 8);
+    });
 
-    // Sum of Talk Time (duration of answered calls)
-    const answeredLogs = logs.filter((l: any) => 
-      !missedResultStatuses.includes(l.result) && !abandonedResultStatuses.includes(l.result)
+    const answeredLogs = logs.filter((l: RingCentralCallLog) => 
+      !missedResultStatuses.includes(l.result) && l.result !== "Abandoned" && l.result !== "Hang Up"
     );
-    const totalTalkTime = answeredLogs.reduce((acc: number, log: any) => acc + (log.duration || 0), 0);
-
+    const totalTalkTime = answeredLogs.reduce((acc: number, log: RingCentralCallLog) => acc + (log.duration || 0), 0);
     const capacitySeconds = Math.max(1, enabledUserCount) * shiftSeconds;
     const occupancyRate = Math.min(98, Math.round((totalTalkTime / capacitySeconds) * 100));
 
-    const missedCallsList = queueLogs
-      .filter((l: any) => {
-        return isMissedStatusCall(l) && (l.duration || 0) >= 9;
-      })
-      .map((l: any) => ({
+    const missedCallsList = metrics.queueLogs
+      .filter((l: RingCentralCallLog) => (l.duration || 0) >= 9 && (missedResultStatuses.includes(l.result) || l.action === "Missed"))
+      .map((l: RingCentralCallLog) => ({
         id: l.id || `missed-${Math.random().toString(36).substr(2, 9)}`,
-        startTime: l.startTime,
+        startTime: l.startTime || "",
         fromName: l.from?.name || "Unknown",
         fromNumber: l.from?.phoneNumber || "Unknown",
         toName: l.to?.name || "Support",
@@ -344,25 +226,116 @@ export async function GET(request: Request) {
         result: l.result || "Missed"
       }));
 
+    // Fetch True Period Comparisons via Supabase RPC functions
+    const [dodRes, wowRes, momRes, qoqRes] = await Promise.all([
+      supabase.rpc("get_period_comparison", { num_days: 1 }),
+      supabase.rpc("get_period_comparison", { num_days: 7 }),
+      supabase.rpc("get_period_comparison", { num_days: 30 }),
+      supabase.rpc("get_period_comparison", { num_days: 90 })
+    ]);
+
+    const formatDbComparison = (dbResult: { data: PeriodComparisonRow[] | null }) => {
+      const data: PeriodComparisonRow = dbResult.data?.[0] || {
+        current_inbound: "0", previous_inbound: "0",
+        current_answered: "0", previous_answered: "0",
+        current_missed: "0", previous_missed: "0",
+        current_abandoned: "0", previous_abandoned: "0",
+        current_avg_wait: 0, previous_avg_wait: 0,
+        pct_inbound: 0, pct_answered: 0, pct_missed: 0, pct_abandoned: 0,
+        rows_available: 0
+      };
+
+      const curDenom = parseInt(data.current_inbound, 10) || 1;
+      const prevDenom = parseInt(data.previous_inbound, 10) || 1;
+
+      const currentAnswerRate = (parseInt(data.current_answered, 10) / curDenom) * 100;
+      const previousAnswerRate = (parseInt(data.previous_answered, 10) / prevDenom) * 100;
+
+      const currentMissedRate = (parseInt(data.current_missed, 10) / curDenom) * 100;
+      const previousMissedRate = (parseInt(data.previous_missed, 10) / prevDenom) * 100;
+
+      const currentAbandonRate = (parseInt(data.current_abandoned, 10) / curDenom) * 100;
+      const previousAbandonRate = (parseInt(data.previous_abandoned, 10) / prevDenom) * 100;
+
+      return {
+        inbound: {
+          current: parseInt(data.current_inbound, 10),
+          previous: parseInt(data.previous_inbound, 10),
+          change: parseInt(data.current_inbound, 10) - parseInt(data.previous_inbound, 10),
+          pct: data.pct_inbound
+        },
+        answered: {
+          current: parseInt(data.current_answered, 10),
+          previous: parseInt(data.previous_answered, 10),
+          change: parseInt(data.current_answered, 10) - parseInt(data.previous_answered, 10),
+          pct: data.pct_answered
+        },
+        missed: {
+          current: parseInt(data.current_missed, 10),
+          previous: parseInt(data.previous_missed, 10),
+          change: parseInt(data.current_missed, 10) - parseInt(data.previous_missed, 10),
+          pct: data.pct_missed
+        },
+        abandoned: {
+          current: parseInt(data.current_abandoned, 10),
+          previous: parseInt(data.previous_abandoned, 10),
+          change: parseInt(data.current_abandoned, 10) - parseInt(data.previous_abandoned, 10),
+          pct: data.pct_abandoned
+        },
+        answerRate: {
+          current: Math.round(currentAnswerRate * 10) / 10,
+          previous: Math.round(previousAnswerRate * 10) / 10,
+          change: Math.round((currentAnswerRate - previousAnswerRate) * 10) / 10,
+          pct: previousAnswerRate > 0 ? Math.round(((currentAnswerRate - previousAnswerRate) / previousAnswerRate) * 100 * 10) / 10 : 0
+        },
+        missedRate: {
+          current: Math.round(currentMissedRate * 10) / 10,
+          previous: Math.round(previousMissedRate * 10) / 10,
+          change: Math.round((currentMissedRate - previousMissedRate) * 10) / 10,
+          pct: previousMissedRate > 0 ? Math.round(((currentMissedRate - previousMissedRate) / previousMissedRate) * 100 * 10) / 10 : 0
+        },
+        abandonRate: {
+          current: Math.round(currentAbandonRate * 10) / 10,
+          previous: Math.round(previousAbandonRate * 10) / 10,
+          change: Math.round((currentAbandonRate - previousAbandonRate) * 10) / 10,
+          pct: previousAbandonRate > 0 ? Math.round(((currentAbandonRate - previousAbandonRate) / previousAbandonRate) * 100 * 10) / 10 : 0
+        }
+      };
+    };
+
+    // Fallback status indicator if there's insufficient historical database rows (< 90 rows triggers simulated warning badge)
+    const qoqRowsFound = (qoqRes.data as PeriodComparisonRow[] | null)?.[0]?.rows_available ?? 0;
+    const comparisonStatus = qoqRowsFound < 90 ? "insufficient_data" : "live";
+
+    // Combine into full payload
+    const comparisonData = {
+      DoD: formatDbComparison(dodRes),
+      WoW: formatDbComparison(wowRes),
+      MoM: formatDbComparison(momRes),
+      QoQ: formatDbComparison(qoqRes)
+    };
+
     const livePayload = buildAnalyticsPayload(
-      totalCallsToday,
-      answeredCalls,
-      missedCalls,
-      abandonedCalls,
-      avgWaitSeconds,
+      metrics.totalCalls,
+      metrics.answeredCalls,
+      metrics.missedCalls,
+      metrics.abandonedCalls,
+      metrics.avgWaitSeconds,
       Math.floor(Math.random() * 4) + 1,
       Math.max(3, enabledUserCount - 15),
       extensions,
-      hourlyVolume,
-      hourlyAnswered,
-      hourlyMissed,
+      metrics.hourlyVolume,
+      metrics.hourlyAnswered,
+      metrics.hourlyMissed,
       "RingCentral Live API",
+      comparisonData,
+      comparisonStatus,
       undefined,
       occupancyRate,
       missedCallsList
     );
 
-    // 3. Upsert Cache to Supabase
+    // Upsert Cache
     try {
       await supabase
         .from("telemetry_cache")
@@ -377,11 +350,10 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ ...livePayload, cached: false });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("RingCentral API Fetch failed, falling back to mock metrics:", error);
-    const mockData = getMockData(`Failed to query RingCentral API: ${error.message}`);
+    const mockData = getMockData(`Failed to query RingCentral API: ${(error as Error).message}`);
     
-    // Cache the fallback mock metrics too to protect against endpoint spamming
     try {
       await supabase
         .from("telemetry_cache")
@@ -394,30 +366,27 @@ export async function GET(request: Request) {
       console.error("Failed to write to database cache:", cacheErr);
     }
 
-    return NextResponse.json({ ...mockData, cached: false, error: error.message });
+    return NextResponse.json({ ...mockData, cached: false, error: (error as Error).message });
   }
 }
 
 function getMockData(statusMessage: string) {
-  // Generate randomized but realistic dashboard metrics matching the May audit
   const baseCalls = 168 + Math.floor(Math.random() * 20) - 10;
   const missed = Math.floor(baseCalls * 0.12);
   const answered = baseCalls - missed;
   const abandoned = Math.floor(baseCalls * 0.08);
 
-  // Generate realistic bell curve for hourly distribution (peaking in the middle of the work day)
   const baseHourly = [0, 0, 0, 0, 0, 0, 2, 7, 15, 22, 28, 30, 25, 20, 18, 12, 10, 5, 3, 1, 0, 0, 0, 0];
-  // Slightly randomize the counts for mock realism
   const hourlyVolume = baseHourly.map(v => v > 0 ? Math.max(0, v + Math.floor(Math.random() * 5) - 2) : 0);
   const hourlyMissed = hourlyVolume.map(v => Math.round(v * 0.12));
   const hourlyAnswered = hourlyVolume.map((v, i) => v - hourlyMissed[i]);
 
   const extensions = [
-    { id: "101", extensionNumber: "101", name: "David Nguyen", type: "User", status: "Enabled" },
-    { id: "102", extensionNumber: "102", name: "Support Line A", type: "Department", status: "Enabled" },
-    { id: "103", extensionNumber: "103", name: "Support Line B", type: "Department", status: "Enabled" },
-    { id: "108", extensionNumber: "108", name: "Justine Chavez", type: "User", status: "Enabled" },
-    { id: "110", extensionNumber: "110", name: "Mega Castillo", type: "User", status: "Enabled" }
+    { id: "101", extensionNumber: "101", name: "David Nguyen", type: "User", status: "Enabled", occupancy: 45 },
+    { id: "102", extensionNumber: "102", name: "Support Line A", type: "Department", status: "Enabled", occupancy: 60 },
+    { id: "103", extensionNumber: "103", name: "Support Line B", type: "Department", status: "Enabled", occupancy: 50 },
+    { id: "108", extensionNumber: "108", name: "Justine Chavez", type: "User", status: "Enabled", occupancy: 70 },
+    { id: "110", extensionNumber: "110", name: "Mega Castillo", type: "User", status: "Enabled", occupancy: 65 }
   ];
 
   const firstNames = ["James", "Mary", "John", "Patricia", "Robert", "Jennifer", "Michael", "Linda", "William", "Elizabeth", "David", "Barbara"];
@@ -427,42 +396,74 @@ function getMockData(statusMessage: string) {
   const simulatedMissedList = Array.from({ length: missed }, (_, i) => {
     const fName = firstNames[Math.floor(Math.random() * firstNames.length)];
     const lName = lastNames[Math.floor(Math.random() * lastNames.length)];
-    const areaCode = 206 + Math.floor(Math.random() * 20);
-    const prefix = 100 + Math.floor(Math.random() * 900);
-    const line = 1000 + Math.floor(Math.random() * 9000);
-    
-    const hour = 8 + Math.floor(Math.random() * 10);
-    const minute = Math.floor(Math.random() * 60);
-    const today = new Date();
-    today.setHours(hour, minute, 0, 0);
-
     return {
       id: `mock-missed-${i}-${Math.random().toString(36).substr(2, 5)}`,
-      startTime: today.toISOString(),
+      startTime: new Date().toISOString(),
       fromName: `${fName} ${lName}`,
-      fromNumber: `+1 (${areaCode}) ${prefix}-${line}`,
-      toName: Math.random() > 0.5 ? "Specialist Queue (Queue 8)" : "Support Line A",
-      toNumber: Math.random() > 0.5 ? "8" : "3",
-      duration: 10 + Math.floor(Math.random() * 45),
+      fromNumber: `+1 (206) 555-0199`,
+      toName: "Specialist Queue (Queue 8)",
+      toNumber: "8",
+      duration: 15,
       result: resultTypes[Math.floor(Math.random() * resultTypes.length)]
     };
-  }).sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
+  });
+
+  // Fallback simulated comparison structure when database is not configured
+  const mockPeriodComparison = (prevRatio: number, scaleFactor: number = 1) => {
+    const curCalls = Math.round(baseCalls * scaleFactor);
+    const curMiss = Math.round(missed * scaleFactor);
+    const curAns = Math.round(answered * scaleFactor);
+    const curAban = Math.round(abandoned * scaleFactor);
+
+    const prevCalls = Math.round(curCalls * prevRatio);
+    const prevMiss = Math.round(curMiss * prevRatio);
+    const prevAns = Math.round(curAns * prevRatio);
+    const prevAban = Math.round(curAban * prevRatio);
+
+    const ansRateCur = (curAns / (curCalls || 1)) * 100;
+    const ansRatePrev = (prevAns / (prevCalls || 1)) * 100;
+
+    const missRateCur = (curMiss / (curCalls || 1)) * 100;
+    const missRatePrev = (prevMiss / (prevCalls || 1)) * 100;
+
+    const abanRateCur = (curAban / (curCalls || 1)) * 100;
+    const abanRatePrev = (prevAban / (prevCalls || 1)) * 100;
+
+    return {
+      inbound: { current: curCalls, previous: prevCalls, change: curCalls - prevCalls, pct: 31.6 },
+      answered: { current: curAns, previous: prevAns, change: curAns - prevAns, pct: 31.7 },
+      missed: { current: curMiss, previous: prevMiss, change: curMiss - prevMiss, pct: 32.4 },
+      abandoned: { current: curAban, previous: prevAban, change: curAban - prevAban, pct: 0 },
+      answerRate: { current: Math.round(ansRateCur * 10) / 10, previous: Math.round(ansRatePrev * 10) / 10, change: 0.1, pct: 0.5 },
+      missedRate: { current: Math.round(missRateCur * 10) / 10, previous: Math.round(missRatePrev * 10) / 10, change: 0.1, pct: 1.6 },
+      abandonRate: { current: Math.round(abanRateCur * 10) / 10, previous: Math.round(abanRatePrev * 10) / 10, change: 0, pct: 0 }
+    };
+  };
+
+  const comparisonData = {
+    DoD: mockPeriodComparison(0.94, 1),
+    WoW: mockPeriodComparison(0.91, 7),
+    MoM: mockPeriodComparison(0.87, 30),
+    QoQ: mockPeriodComparison(0.76, 90)
+  };
 
   return buildAnalyticsPayload(
     baseCalls,
     answered,
     missed,
     abandoned,
-    45 + Math.floor(Math.random() * 10),
-    Math.floor(Math.random() * 3) + 1,
-    5,
+    32,
+    2,
+    11,
     extensions,
     hourlyVolume,
     hourlyAnswered,
     hourlyMissed,
     "Simulated Telemetry Metrics",
+    comparisonData,
+    "insufficient_data",
     statusMessage,
-    undefined,
+    72,
     simulatedMissedList
   );
 }
@@ -475,85 +476,17 @@ function buildAnalyticsPayload(
   avgWaitSeconds: number,
   activeQueueCount: number,
   agentsOnline: number,
-  extensions: any[],
+  extensions: { id: string; extensionNumber: string; name: string; type: string; status: string; occupancy: number }[],
   hourlyVolume: number[],
   hourlyAnswered: number[],
   hourlyMissed: number[],
   source: string,
+  comparisonData: Record<string, unknown>,
+  comparisonStatus: "live" | "insufficient_data",
   info?: string,
   agentOccupancy?: number,
-  missedCallsList: any[] = []
+  missedCallsList: { id: string; startTime: string; fromName: string; fromNumber: string; toName: string; toNumber: string; duration: number; result: string }[] = []
 ) {
-  const calculateRates = (calls: number, ans: number, miss: number, aban: number) => {
-    const denom = calls || 1;
-    return {
-      ansRate: (ans / denom) * 100,
-      missRate: (miss / denom) * 100,
-      abanRate: (aban / denom) * 100
-    };
-  };
-
-  const curRates = calculateRates(totalCallsToday, answeredCalls, missedCalls, abandonedCalls);
-
-  const makeComparisonMetric = (curVal: number, prevRatio: number, isRate: boolean = false) => {
-    const prevVal = isRate ? Math.max(1, curVal + (Math.random() * 4 - 2)) : Math.round(curVal * prevRatio);
-    const change = curVal - prevVal;
-    const pct = prevVal > 0 ? (change / prevVal) * 100 : 0;
-    return {
-      current: isRate ? Math.round(curVal * 10) / 10 : curVal,
-      previous: isRate ? Math.round(prevVal * 10) / 10 : prevVal,
-      change: isRate ? Math.round(change * 10) / 10 : change,
-      pct: Math.round(pct * 10) / 10
-    };
-  };
-
-  const buildPeriodComparison = (prevRatio: number, scaleFactor: number = 1) => {
-    const curCalls = Math.round(totalCallsToday * scaleFactor);
-    const curMiss = Math.round(missedCalls * scaleFactor);
-    const curAns = Math.round(answeredCalls * scaleFactor);
-    const curAban = Math.round(abandonedCalls * scaleFactor);
-
-    const prevCalls = Math.round(curCalls * prevRatio);
-    const prevMiss = Math.round(curMiss * prevRatio);
-    const prevAns = Math.round(curAns * prevRatio);
-    const prevAban = Math.round(curAban * prevRatio);
-
-    const scaledCurRates = calculateRates(curCalls, curAns, curMiss, curAban);
-    const prevRates = calculateRates(prevCalls, prevAns, prevMiss, prevAban);
-
-    return {
-      inbound: makeComparisonMetric(curCalls, prevRatio),
-      answered: makeComparisonMetric(curAns, prevRatio),
-      missed: makeComparisonMetric(curMiss, prevRatio),
-      abandoned: makeComparisonMetric(curAban, prevRatio),
-      answerRate: {
-        current: Math.round(scaledCurRates.ansRate * 10) / 10,
-        previous: Math.round(prevRates.ansRate * 10) / 10,
-        change: Math.round((scaledCurRates.ansRate - prevRates.ansRate) * 10) / 10,
-        pct: Math.round(((scaledCurRates.ansRate - prevRates.ansRate) / (prevRates.ansRate || 1)) * 100 * 10) / 10
-      },
-      missedRate: {
-        current: Math.round(scaledCurRates.missRate * 10) / 10,
-        previous: Math.round(prevRates.missRate * 10) / 10,
-        change: Math.round((scaledCurRates.missRate - prevRates.missRate) * 10) / 10,
-        pct: Math.round(((scaledCurRates.missRate - prevRates.missRate) / (prevRates.missRate || 1)) * 100 * 10) / 10
-      },
-      abandonRate: {
-        current: Math.round(scaledCurRates.abanRate * 10) / 10,
-        previous: Math.round(prevRates.abanRate * 10) / 10,
-        change: Math.round((scaledCurRates.abanRate - prevRates.abanRate) * 10) / 10,
-        pct: Math.round(((scaledCurRates.abanRate - prevRates.abanRate) / (prevRates.abanRate || 1)) * 100 * 10) / 10
-      }
-    };
-  };
-
-  const comparisonData = {
-    DoD: buildPeriodComparison(0.94, 1),
-    WoW: buildPeriodComparison(0.91, 7),
-    MoM: buildPeriodComparison(0.87, 30),
-    QoQ: buildPeriodComparison(0.76, 90)
-  };
-
   const formatHourLabel = (h: number) => {
     if (h === 0) return "12 AM";
     if (h === 12) return "12 PM";
@@ -572,13 +505,10 @@ function buildAnalyticsPayload(
     };
   });
 
-  // Hotspot matrix (7 days x 24 hours)
   const hotspotData = Array.from({ length: 7 }, (_, dayIdx) => {
     const isWeekend = dayIdx === 5 || dayIdx === 6;
     return Array.from({ length: 24 }, (_, hour) => {
-      if (isWeekend) {
-        return Math.random() > 0.85 ? Math.floor(Math.random() * 2) : 0;
-      }
+      if (isWeekend) return Math.random() > 0.85 ? Math.floor(Math.random() * 2) : 0;
       if (hour >= 8 && hour <= 17) {
         const peakFactor = hour >= 10 && hour <= 14 ? 1.8 : 1.0;
         return Math.max(0, Math.floor((Math.random() * 12 + 2) * peakFactor));
@@ -587,18 +517,13 @@ function buildAnalyticsPayload(
     });
   });
 
-  // Business Hours vs After Hours data
-  let bhInbound = 0;
-  let bhAnswered = 0;
-  let bhMissed = 0;
-  let ahInbound = 0;
-  let ahAnswered = 0;
-  let ahMissed = 0;
+  let bhInbound = 0, bhAnswered = 0, bhMissed = 0;
+  let ahInbound = 0, ahAnswered = 0, ahMissed = 0;
 
   hourlyVolume.forEach((count, hour) => {
     const missed = hourlyMissed[hour] || 0;
     const answered = hourlyAnswered[hour] || 0;
-    if (hour >= 8 && hour <= 18) { // 8 AM to 6 PM
+    if (hour >= 8 && hour <= 18) {
       bhInbound += count;
       bhAnswered += answered;
       bhMissed += missed;
@@ -609,7 +534,6 @@ function buildAnalyticsPayload(
     }
   });
 
-  // Daily Trends over past 7 days
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const todayIdx = new Date().getDay();
   const orderedDays = [];
@@ -622,11 +546,10 @@ function buildAnalyticsPayload(
     const ratio = idx === 6 ? 1 : 0.8 + Math.random() * 0.4;
     const inbound = Math.round(totalCallsToday * ratio);
     const missed = Math.round(missedCalls * ratio);
-    const answered = inbound - missed;
     return {
       day,
       inbound,
-      answered,
+      answered: inbound - missed,
       missed
     };
   });
@@ -653,13 +576,10 @@ function buildAnalyticsPayload(
     { name: "Support Line A (Queue 3)", count: activeQueueCount - Math.max(0, activeQueueCount - 1) }
   ].filter(q => q.count > 0);
 
-  const resolvedOccupancy = agentOccupancy !== undefined 
-    ? agentOccupancy 
-    : Math.min(95, Math.max(55, 60 + (totalCallsToday % 15) + (activeQueueCount * 4)));
-
   return {
     status: source === "RingCentral Live API" ? "online" : "fallback",
     integrationSource: source,
+    comparison_status: comparisonStatus,
     info,
     missedCallsList,
     metrics: {
@@ -670,7 +590,7 @@ function buildAnalyticsPayload(
       avgWaitSeconds,
       activeQueueCount,
       agentsOnline,
-      agentOccupancy: resolvedOccupancy
+      agentOccupancy: agentOccupancy !== undefined ? agentOccupancy : 72
     },
     activeQueues,
     comparisonData,

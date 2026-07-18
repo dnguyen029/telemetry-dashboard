@@ -760,6 +760,7 @@ export default function DashboardSuite() {
                         setIsMissedModalOpen(true);
                       }
                     }}
+                    dataStatus={rcData.comparison_status}
                   />
                 </div>
               )}
