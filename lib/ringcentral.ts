@@ -32,32 +32,31 @@ export interface RingCentralCallLog {
 }
 
 export function getPacificDateBounds(dateStr?: string): CallBounds {
-  let year: number;
-  let month: number;
-  let day: number;
+  const dateStrLA = dateStr || new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+  const parts = dateStrLA.split("-").map(Number);
 
-  if (dateStr) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-      throw new Error("Invalid date format. Expected YYYY-MM-DD");
-    }
-    const parts = dateStr.split("-");
-    year = parseInt(parts[0], 10);
-    month = parseInt(parts[1], 10) - 1; // 0-indexed
-    day = parseInt(parts[2], 10);
-  } else {
-    // Get current date in UTC Time
-    const utcDate = new Date();
-    year = utcDate.getUTCFullYear();
-    month = utcDate.getUTCMonth();
-    day = utcDate.getUTCDate();
-  }
+  // Create a UTC date at midnight of the target day
+  const utcDate = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2], 0, 0, 0));
+  
+  // Format the UTC date in America/Los_Angeles to see what local hour it corresponds to
+  const laHour = parseInt(
+    new Intl.DateTimeFormat("en-US", { 
+      timeZone: "America/Los_Angeles", 
+      hour: "2-digit", 
+      hour12: false 
+    }).format(utcDate), 
+    10
+  );
 
-  // UTC Midnight boundaries
-  const dateFrom = new Date(Date.UTC(year, month, day, 0, 0, 0, 0)).toISOString();
-  const dateTo = new Date(Date.UTC(year, month, day, 23, 59, 59, 999)).toISOString();
+  // The local hour tells us the offset (e.g. 17:00 means offset is -7 hours, 16:00 means -8 hours)
+  const offsetHours = laHour >= 12 ? laHour - 24 : laHour;
 
-  const todayUTC = new Date().toISOString().split("T")[0];
-  const isTodayDate = !dateStr || dateStr === todayUTC;
+  // Set UTC bounds shifted by the local timezone offset to cover 00:00:00 to 23:59:59 Pacific time
+  const dateFrom = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2], -offsetHours, 0, 0)).toISOString();
+  const dateTo = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2], -offsetHours + 23, 59, 59, 999)).toISOString();
+
+  const todayLA = new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+  const isTodayDate = !dateStr || dateStr === todayLA;
 
   return { dateFrom, dateTo, isToday: isTodayDate };
 }
