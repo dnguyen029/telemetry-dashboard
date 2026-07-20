@@ -95,21 +95,16 @@ export async function GET(request: Request) {
   const jwt = process.env.RINGCENTRAL_JWT;
   const server = process.env.RINGCENTRAL_SERVER_URL || "https://platform.ringcentral.com";
 
-  // If credentials are not set, return simulated metrics
+  // If credentials are not configured, return explicit error — do not serve simulated data
   if (!clientId || !clientSecret || !jwt) {
-    const mockData = getMockData("Missing RingCentral API keys in environment config.");
-    try {
-      await supabase
-        .from("telemetry_cache")
-        .upsert({
-          id: CACHE_ID,
-          data: mockData,
-          updated_at: new Date().toISOString()
-        });
-    } catch (cacheErr) {
-      console.error("Failed to write to database cache:", cacheErr);
-    }
-    return NextResponse.json({ ...mockData, cached: false });
+    return NextResponse.json(
+      {
+        status: "error",
+        integrationSource: "RingCentral",
+        message: "RingCentral API credentials are not configured in the environment."
+      },
+      { status: 503 }
+    );
   }
 
   try {
@@ -414,122 +409,41 @@ export async function GET(request: Request) {
     return NextResponse.json({ ...livePayload, cached: false });
 
   } catch (error: unknown) {
-    console.error("RingCentral API Fetch failed, falling back to mock metrics:", error);
-    const mockData = getMockData(`Failed to query RingCentral API: ${(error as Error).message}`);
-    
+    console.error("RingCentral API Fetch failed, attempting stale cache recovery:", error);
+
+    // Tier 1: attempt to recover any existing cache entry (even if expired)
     try {
-      await supabase
+      const { data: staleRow } = await supabase
         .from("telemetry_cache")
-        .upsert({
-          id: CACHE_ID,
-          data: mockData,
-          updated_at: new Date().toISOString()
+        .select("data")
+        .eq("id", CACHE_ID)
+        .single();
+
+      if (staleRow) {
+        return NextResponse.json({
+          ...(staleRow as { data: Record<string, unknown> }).data,
+          status: "stale",
+          error: `RingCentral API unreachable. Displaying last known data. (${(error as Error).message})`
         });
-    } catch (cacheErr) {
-      console.error("Failed to write to database cache:", cacheErr);
+      }
+    } catch (cacheDbErr) {
+      console.error("Stale cache recovery failed:", cacheDbErr);
     }
 
-    return NextResponse.json({ ...mockData, cached: false, error: (error as Error).message });
+    // Tier 2: hard fail — no cache exists at all
+    return NextResponse.json(
+      {
+        status: "error",
+        integrationSource: "RingCentral",
+        message: "RingCentral API offline and no cached data is available.",
+        error: (error as Error).message
+      },
+      { status: 502 }
+    );
   }
 }
 
-function getMockData(statusMessage: string) {
-  const baseCalls = 168 + Math.floor(Math.random() * 20) - 10;
-  const missed = Math.floor(baseCalls * 0.12);
-  const answered = baseCalls - missed;
-  const abandoned = Math.floor(baseCalls * 0.08);
 
-  const baseHourly = [0, 0, 0, 0, 0, 0, 2, 7, 15, 22, 28, 30, 25, 20, 18, 12, 10, 5, 3, 1, 0, 0, 0, 0];
-  const hourlyVolume = baseHourly.map(v => v > 0 ? Math.max(0, v + Math.floor(Math.random() * 5) - 2) : 0);
-  const hourlyMissed = hourlyVolume.map(v => Math.round(v * 0.12));
-  const hourlyAnswered = hourlyVolume.map((v, i) => v - hourlyMissed[i]);
-
-  const extensions = [
-    { id: "101", extensionNumber: "101", name: "David Nguyen", type: "User", status: "Enabled", occupancy: 45 },
-    { id: "102", extensionNumber: "102", name: "Support Line A", type: "Department", status: "Enabled", occupancy: 60 },
-    { id: "103", extensionNumber: "103", name: "Support Line B", type: "Department", status: "Enabled", occupancy: 50 },
-    { id: "108", extensionNumber: "108", name: "Justine Chavez", type: "User", status: "Enabled", occupancy: 70 },
-    { id: "110", extensionNumber: "110", name: "Mega Castillo", type: "User", status: "Enabled", occupancy: 65 }
-  ];
-
-  const firstNames = ["James", "Mary", "John", "Patricia", "Robert", "Jennifer", "Michael", "Linda", "William", "Elizabeth", "David", "Barbara"];
-  const lastNames = ["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Rodriguez", "Martinez"];
-  const resultTypes = ["No Answer", "Sent to Voicemail", "Missed", "Declined"];
-  
-  const simulatedMissedList = Array.from({ length: missed }, (_, i) => {
-    const fName = firstNames[Math.floor(Math.random() * firstNames.length)];
-    const lName = lastNames[Math.floor(Math.random() * lastNames.length)];
-    return {
-      id: `mock-missed-${i}-${Math.random().toString(36).substr(2, 5)}`,
-      startTime: new Date().toISOString(),
-      fromName: `${fName} ${lName}`,
-      fromNumber: `+1 (206) 555-0199`,
-      toName: "Specialist Queue (Queue 8)",
-      toNumber: "8",
-      duration: 15,
-      result: resultTypes[Math.floor(Math.random() * resultTypes.length)]
-    };
-  });
-
-  // Fallback simulated comparison structure when database is not configured
-  const mockPeriodComparison = (prevRatio: number, scaleFactor: number = 1) => {
-    const curCalls = Math.round(baseCalls * scaleFactor);
-    const curMiss = Math.round(missed * scaleFactor);
-    const curAns = Math.round(answered * scaleFactor);
-    const curAban = Math.round(abandoned * scaleFactor);
-
-    const prevCalls = Math.round(curCalls * prevRatio);
-    const prevMiss = Math.round(curMiss * prevRatio);
-    const prevAns = Math.round(curAns * prevRatio);
-    const prevAban = Math.round(curAban * prevRatio);
-
-    const ansRateCur = (curAns / (curCalls || 1)) * 100;
-    const ansRatePrev = (prevAns / (prevCalls || 1)) * 100;
-
-    const missRateCur = (curMiss / (curCalls || 1)) * 100;
-    const missRatePrev = (prevMiss / (prevCalls || 1)) * 100;
-
-    const abanRateCur = (curAban / (curCalls || 1)) * 100;
-    const abanRatePrev = (prevAban / (prevCalls || 1)) * 100;
-
-    return {
-      inbound: { current: curCalls, previous: prevCalls, change: curCalls - prevCalls, pct: 31.6 },
-      answered: { current: curAns, previous: prevAns, change: curAns - prevAns, pct: 31.7 },
-      missed: { current: curMiss, previous: prevMiss, change: curMiss - prevMiss, pct: 32.4 },
-      abandoned: { current: curAban, previous: prevAban, change: curAban - prevAban, pct: 0 },
-      answerRate: { current: Math.round(ansRateCur * 10) / 10, previous: Math.round(ansRatePrev * 10) / 10, change: 0.1, pct: 0.5 },
-      missedRate: { current: Math.round(missRateCur * 10) / 10, previous: Math.round(missRatePrev * 10) / 10, change: 0.1, pct: 1.6 },
-      abandonRate: { current: Math.round(abanRateCur * 10) / 10, previous: Math.round(abanRatePrev * 10) / 10, change: 0, pct: 0 }
-    };
-  };
-
-  const comparisonData = {
-    DoD: mockPeriodComparison(0.94, 1),
-    WoW: mockPeriodComparison(0.91, 7),
-    MoM: mockPeriodComparison(0.87, 30),
-    QoQ: mockPeriodComparison(0.76, 90)
-  };
-
-  return buildAnalyticsPayload(
-    baseCalls,
-    answered,
-    missed,
-    abandoned,
-    32,
-    2,
-    11,
-    extensions,
-    hourlyVolume,
-    hourlyAnswered,
-    hourlyMissed,
-    "Simulated Telemetry Metrics",
-    comparisonData,
-    "insufficient_data",
-    statusMessage,
-    72,
-    simulatedMissedList
-  );
-}
 
 function buildAnalyticsPayload(
   totalCallsToday: number,
