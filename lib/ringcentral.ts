@@ -156,17 +156,19 @@ export function aggregateCallLogs(
     return isMissedStatusCall(l) && (l.duration || 0) >= 9;
   }).length;
 
-  // Proxy wait time from Simple Call Log data (no dedicated wait-time field available):
-  // - Answered calls (>= 45s): subtract 30s talk-floor estimate to isolate hold portion
-  // - Short accepted calls (< 45s): answered too quickly to attribute meaningful wait — proxy as 0
-  // - Unanswered/abandoned calls: full ring duration IS the caller's wait time, capped at 120s
+  // Proxy wait time from Simple Call Log data (no dedicated wait-time field available).
+  // The RingCentral Simple API only returns total call duration (ring + talk time combined),
+  // not queue hold time. We use these bounded estimates to approximate queue wait:
+  // - Answered calls (>= 45s): caller waited while routing — cap at 25s (realistic queue max)
+  // - Short accepted calls (< 45s): answered near-instantly — cap at 10s
+  // - Unanswered/abandoned calls: ring duration IS the caller's wait, capped at 45s
   const waitTimes = queueLogs.map((l: RingCentralCallLog) => {
     const dur = l.duration || 0;
     const isAnswered = isAcceptedCall(l) && dur >= 45;
     const isShortAccepted = isAcceptedCall(l) && dur < 45;
-    if (isAnswered) return Math.max(0, dur - 30);
-    if (isShortAccepted) return 0;
-    return Math.min(dur, 120);
+    if (isAnswered) return Math.min(dur, 25);
+    if (isShortAccepted) return Math.min(dur, 10);
+    return Math.min(dur, 45);
   });
 
   if (waitTimes.length > 0) {

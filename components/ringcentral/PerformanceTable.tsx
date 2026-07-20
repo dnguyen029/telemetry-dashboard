@@ -112,7 +112,7 @@ export default function PerformanceTable({ comparisonData, sparklines, period, s
                   : "text-slate-550 dark:bg-transparent dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
               }`}
             >
-              {p}
+              {p === "DoD" ? "Today" : p}
             </button>
           ))}
         </div>

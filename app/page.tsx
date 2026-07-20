@@ -223,7 +223,7 @@ export default function DashboardSuite() {
   const [rcData, setRcData] = useState<RingCentralTelemetryData | null>(null);
   const [rcLoading, setRcLoading] = useState(false);
   const [rcError, setRcError] = useState<string | null>(null);
-  const [period, setPeriod] = useState<"DoD" | "WoW" | "MoM" | "QoQ">("WoW");
+  const [period, setPeriod] = useState<"DoD" | "WoW" | "MoM" | "QoQ">("DoD");
   const [isMissedModalOpen, setIsMissedModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     return new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });

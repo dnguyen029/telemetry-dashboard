@@ -10,6 +10,7 @@ import {
   getActiveQueueCount,
   maskPII,
   type RingCentralCallLog,
+  type AggregatedMetrics,
   type RingCentralExtension 
 } from "@/lib/ringcentral";
 
@@ -281,9 +282,17 @@ export async function GET(request: Request) {
         result: l.result || "Missed"
       }));
 
-    // Fetch True Period Comparisons via Supabase RPC functions
-    const [dodRes, wowRes, momRes, qoqRes] = await Promise.all([
-      supabase.rpc("get_period_comparison", { num_days: 1 }),
+    const [y, m, d] = formattedDate.split("-").map(Number);
+    const prevDate = new Date(Date.UTC(y, m - 1, d - 1));
+    const prevDateStr = prevDate.toISOString().split("T")[0];
+
+    // Fetch previous day's record for DoD, and WoW/MoM/QoQ via RPC
+    const [prevDayRes, wowRes, momRes, qoqRes] = await Promise.all([
+      supabase
+        .from("daily_call_telemetry")
+        .select("inbound_calls, answered_calls, missed_calls, abandoned_calls, avg_wait_seconds")
+        .eq("date", prevDateStr)
+        .maybeSingle(),
       supabase.rpc("get_period_comparison", { num_days: 7 }),
       supabase.rpc("get_period_comparison", { num_days: 30 }),
       supabase.rpc("get_period_comparison", { num_days: 90 })
@@ -364,7 +373,7 @@ export async function GET(request: Request) {
 
     // Combine into full payload
     const comparisonData = {
-      DoD: formatDbComparison(dodRes),
+      DoD: buildDoDComparison(metrics, prevDayRes.data),
       WoW: formatDbComparison(wowRes),
       MoM: formatDbComparison(momRes),
       QoQ: formatDbComparison(qoqRes)
@@ -443,6 +452,38 @@ export async function GET(request: Request) {
   }
 }
 
+function buildDoDComparison(
+  current: AggregatedMetrics,
+  prev: { inbound_calls: number; answered_calls: number; missed_calls: number; abandoned_calls: number; avg_wait_seconds: number } | null
+) {
+  const prevInbound   = prev?.inbound_calls   ?? 0;
+  const prevAnswered  = prev?.answered_calls  ?? 0;
+  const prevMissed    = prev?.missed_calls    ?? 0;
+  const prevAbandoned = prev?.abandoned_calls ?? 0;
+
+  const curDenom  = current.totalCalls || 1;
+  const prevDenom = prevInbound || 1;
+
+  const curAnswerRate   = (current.answeredCalls  / curDenom)  * 100;
+  const prevAnswerRate  = (prevAnswered  / prevDenom) * 100;
+  const curMissedRate   = (current.missedCalls    / curDenom)  * 100;
+  const prevMissedRate  = (prevMissed   / prevDenom) * 100;
+  const curAbandonRate  = (current.abandonedCalls / curDenom)  * 100;
+  const prevAbandonRate = (prevAbandoned / prevDenom) * 100;
+
+  const pct = (cur: number, p: number) =>
+    p > 0 ? Math.round(((cur - p) / p) * 100 * 10) / 10 : 0;
+
+  return {
+    inbound:     { current: current.totalCalls,     previous: prevInbound,   change: current.totalCalls    - prevInbound,   pct: pct(current.totalCalls,    prevInbound) },
+    answered:    { current: current.answeredCalls,   previous: prevAnswered,  change: current.answeredCalls  - prevAnswered,  pct: pct(current.answeredCalls,  prevAnswered) },
+    missed:      { current: current.missedCalls,     previous: prevMissed,    change: current.missedCalls    - prevMissed,    pct: pct(current.missedCalls,    prevMissed) },
+    abandoned:   { current: current.abandonedCalls,  previous: prevAbandoned, change: current.abandonedCalls - prevAbandoned, pct: pct(current.abandonedCalls, prevAbandoned) },
+    answerRate:  { current: Math.round(curAnswerRate  * 10) / 10, previous: Math.round(prevAnswerRate  * 10) / 10, change: Math.round((curAnswerRate  - prevAnswerRate)  * 10) / 10, pct: pct(curAnswerRate,  prevAnswerRate) },
+    missedRate:  { current: Math.round(curMissedRate  * 10) / 10, previous: Math.round(prevMissedRate  * 10) / 10, change: Math.round((curMissedRate  - prevMissedRate)  * 10) / 10, pct: pct(curMissedRate,  prevMissedRate) },
+    abandonRate: { current: Math.round(curAbandonRate * 10) / 10, previous: Math.round(prevAbandonRate * 10) / 10, change: Math.round((curAbandonRate - prevAbandonRate) * 10) / 10, pct: pct(curAbandonRate, prevAbandonRate) }
+  };
+}
 
 
 function buildAnalyticsPayload(
