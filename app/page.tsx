@@ -53,6 +53,34 @@ import { isValidVanityMatch } from "@/lib/priceFilters";
 
 const RETAILERS = ['homedepot', 'lowes', 'wayfair', 'amazon', 'walmart', 'ebay', 'target', 'bestbuy'];
 
+// SLA operational thresholds — adjust per business requirements
+const SLA_THRESHOLDS = {
+  avgWaitSeconds: { warn: 45, critical: 90 },   // seconds in queue
+  activeQueue:    { warn: 3,  critical: 6  },   // simultaneous callers waiting
+  agentOccupancy: { warn: 80, critical: 95 },   // percent talk time / capacity
+  missedRate:     { warn: 15, critical: 25 },   // percent of total inbound
+  abandonRate:    { warn: 10, critical: 20 },   // percent of total inbound
+};
+
+type SLAStatus = "ok" | "warn" | "critical";
+
+function getSLAStatus(
+  value: number,
+  thresholds: { warn: number; critical: number }
+): SLAStatus {
+  if (value >= thresholds.critical) return "critical";
+  if (value >= thresholds.warn) return "warn";
+  return "ok";
+}
+
+function getSLAColor(status: SLAStatus): string {
+  return {
+    ok:       "text-emerald-500 dark:text-emerald-400",
+    warn:     "text-amber-500  dark:text-amber-400",
+    critical: "text-red-500    dark:text-red-400",
+  }[status];
+}
+
 const normalizeProductPrices = (prod: any) => {
   const prices = { ...prod.prices } as any;
   RETAILERS.forEach((key) => {
@@ -150,14 +178,39 @@ export default function DashboardSuite() {
   }, [selectedDate]);
 
   useEffect(() => {
-    fetchRcMetrics(selectedDate);
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
+    const start = () => {
+      if (intervalId) clearInterval(intervalId);
+      intervalId = setInterval(() => fetchRcMetrics(selectedDate), 30000);
+    };
+
+    const stop = () => {
+      if (intervalId) { clearInterval(intervalId); intervalId = null; }
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        fetchRcMetrics(selectedDate); // Immediate refresh on tab focus
+        start();
+      } else {
+        stop();
+      }
+    };
+
+    // Only auto-refresh for today's date, not historical views
     const todayLA = new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+    fetchRcMetrics(selectedDate);
+
     if (selectedDate === todayLA) {
-      const intervalId = setInterval(() => {
-        fetchRcMetrics(selectedDate);
-      }, 30000);
-      return () => clearInterval(intervalId);
+      document.addEventListener("visibilitychange", handleVisibility);
+      start();
     }
+
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, [selectedDate, fetchRcMetrics]);
 
   const getPercent = (val: number) => {
@@ -683,82 +736,96 @@ export default function DashboardSuite() {
                   <AlertTriangle className="w-4 h-4 shrink-0" />
                   <span>Error communicating with RingCentral: {rcError}. Rendering cached/simulated baseline.</span>
                 </div>
-              )}
-
-              {/* KPI Cards */}
+              )}              {/* KPI Cards */}
               {rcData?.metrics && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
-                  <Card className="glass-card shadow-sm border-slate-200 dark:border-slate-900 glow-blue">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                      <CardTitle className="text-xs font-mono font-semibold tracking-wider text-slate-550 dark:text-slate-400 uppercase">Today's Call Volume</CardTitle>
-                      <Phone className="w-4 h-4 text-blue-500" />
-                    </CardHeader>
-                    <CardContent className="space-y-1.5">
-                      <div className="text-3xl font-bold text-slate-800 dark:text-white font-mono">{rcData.metrics.totalCallsToday}</div>
-                      <div className="text-[10px] text-slate-500 dark:text-slate-400 flex flex-wrap gap-x-2">
-                        <span className="text-emerald-500 font-semibold">{rcData.metrics.answeredCalls} Ans</span>
-                        <span>•</span>
-                        <span className="text-red-500 font-semibold">{rcData.metrics.missedCalls} Miss</span>
-                        <span>•</span>
-                        <span className="text-amber-500 font-semibold">{rcData.metrics.abandonedCalls || 0} Aband</span>
-                      </div>
-                    </CardContent>
-                  </Card>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+                    <Card className="glass-card shadow-sm border-slate-200 dark:border-slate-900 glow-blue">
+                      <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-xs font-mono font-semibold tracking-wider text-slate-550 dark:text-slate-400 uppercase">Today's Call Volume</CardTitle>
+                        <Phone className="w-4 h-4 text-blue-500" />
+                      </CardHeader>
+                      <CardContent className="space-y-1.5">
+                        <div className="text-3xl font-bold text-slate-800 dark:text-white font-mono">{rcData.metrics.totalCallsToday}</div>
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400 flex flex-wrap gap-x-2">
+                          <span className="text-emerald-500 font-semibold">{rcData.metrics.answeredCalls} Ans</span>
+                          <span>•</span>
+                          <span className="text-red-500 font-semibold">{rcData.metrics.missedCalls} Miss</span>
+                          <span>•</span>
+                          <span className="text-amber-500 font-semibold">{rcData.metrics.abandonedCalls || 0} Aband</span>
+                        </div>
+                      </CardContent>
+                    </Card>
 
-                  <Card className="glass-card shadow-sm border-slate-200 dark:border-slate-900 glow-amber">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                      <CardTitle className="text-xs font-mono font-semibold tracking-wider text-slate-550 dark:text-slate-400 uppercase">Active Queue Lines</CardTitle>
-                      <BarChart2 className="w-4 h-4 text-amber-500" />
-                    </CardHeader>
-                    <CardContent className="space-y-1.5">
-                      <div className="text-3xl font-bold text-amber-500 font-mono">{rcData.metrics.activeQueueCount}</div>
-                      <div className="text-[9px] text-slate-500 dark:text-slate-400 space-y-0.5 border-t border-slate-200 dark:border-slate-855 pt-1.5">
-                        {rcData.activeQueues && rcData.activeQueues.length > 0 ? (
-                          rcData.activeQueues.map((q: any, idx: number) => (
-                            <div key={idx} className="flex justify-between gap-2 font-mono">
-                              <span className="truncate max-w-[130px]">{q.name.split(" (")[0]}:</span>
-                              <strong className="text-slate-700 dark:text-slate-205">{q.count}</strong>
-                            </div>
-                          ))
-                        ) : (
-                          <p>No queued connections</p>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
+                    <Card className="glass-card shadow-sm border-slate-200 dark:border-slate-900 glow-amber">
+                      <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-xs font-mono font-semibold tracking-wider text-slate-550 dark:text-slate-400 uppercase">Active Queue Lines</CardTitle>
+                        <BarChart2 className="w-4 h-4 text-amber-500" />
+                      </CardHeader>
+                      <CardContent className="space-y-1.5">
+                        <div className={`text-3xl font-bold font-mono ${getSLAColor(getSLAStatus(rcData.metrics.activeQueueCount, SLA_THRESHOLDS.activeQueue))}`}>{rcData.metrics.activeQueueCount}</div>
+                        <div className="text-[9px] text-slate-500 dark:text-slate-400 space-y-0.5 border-t border-slate-200 dark:border-slate-855 pt-1.5">
+                          {rcData.activeQueues && rcData.activeQueues.length > 0 ? (
+                            rcData.activeQueues.map((q: any, idx: number) => (
+                              <div key={idx} className="flex justify-between gap-2 font-mono">
+                                <span className="truncate max-w-[130px]">{q.name.split(" (")[0]}:</span>
+                                <strong className="text-slate-700 dark:text-slate-205">{q.count}</strong>
+                              </div>
+                            ))
+                          ) : (
+                            <p>No queued connections</p>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
 
-                  <Card className="glass-card shadow-sm border-slate-200 dark:border-slate-900 glow-indigo">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                      <CardTitle className="text-xs font-mono font-semibold tracking-wider text-slate-550 dark:text-slate-400 uppercase">Average Wait Time</CardTitle>
-                      <Clock className="w-4 h-4 text-indigo-500" />
-                    </CardHeader>
-                    <CardContent className="space-y-1.5">
-                      <div className="text-3xl font-bold text-slate-800 dark:text-white font-mono">{rcData.metrics.avgWaitSeconds}s</div>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-455">Target SLA threshold: &lt; 60 seconds</p>
-                    </CardContent>
-                  </Card>
+                    <Card className="glass-card shadow-sm border-slate-200 dark:border-slate-900 glow-indigo">
+                      <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-xs font-mono font-semibold tracking-wider text-slate-550 dark:text-slate-400 uppercase">Average Wait Time</CardTitle>
+                        <Clock className="w-4 h-4 text-indigo-500" />
+                      </CardHeader>
+                      <CardContent className="space-y-1.5">
+                        <div className={`text-3xl font-bold font-mono ${getSLAColor(getSLAStatus(rcData.metrics.avgWaitSeconds, SLA_THRESHOLDS.avgWaitSeconds))}`}>{rcData.metrics.avgWaitSeconds}s</div>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-455">Target SLA threshold: &lt; 60 seconds</p>
+                      </CardContent>
+                    </Card>
 
-                  <Card className="glass-card shadow-sm border-slate-200 dark:border-slate-900 glow-emerald">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                      <CardTitle className="text-xs font-mono font-semibold tracking-wider text-slate-550 dark:text-slate-400 uppercase">Agent Occupancy</CardTitle>
-                      <Percent className="w-4 h-4 text-emerald-500" />
-                    </CardHeader>
-                    <CardContent className="space-y-1.5">
-                      <div className="text-3xl font-bold text-slate-800 dark:text-white font-mono">{rcData.metrics.agentOccupancy}%</div>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-450">Active talk time vs total capacity</p>
-                    </CardContent>
-                  </Card>
+                    <Card className="glass-card shadow-sm border-slate-200 dark:border-slate-900 glow-emerald">
+                      <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-xs font-mono font-semibold tracking-wider text-slate-550 dark:text-slate-400 uppercase">Agent Occupancy</CardTitle>
+                        <Percent className="w-4 h-4 text-emerald-500" />
+                      </CardHeader>
+                      <CardContent className="space-y-1.5">
+                        <div className={`text-3xl font-bold font-mono ${getSLAColor(getSLAStatus(rcData.metrics.agentOccupancy, SLA_THRESHOLDS.agentOccupancy))}`}>{rcData.metrics.agentOccupancy}%</div>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-450">Active talk time vs total capacity</p>
+                      </CardContent>
+                    </Card>
 
-                  <Card className="glass-card shadow-sm border-slate-200 dark:border-slate-900 glow-indigo">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                      <CardTitle className="text-xs font-mono font-semibold tracking-wider text-slate-550 dark:text-slate-400 uppercase">Agents Online</CardTitle>
-                      <Users className="w-4 h-4 text-blue-500" />
-                    </CardHeader>
-                    <CardContent className="space-y-1.5">
-                      <div className="text-3xl font-bold text-slate-800 dark:text-white font-mono">{rcData.metrics.agentsOnline}</div>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400">Active Extensions monitored: {rcData.extensions?.length || 0}</p>
-                    </CardContent>
-                  </Card>
+                    <Card className="glass-card shadow-sm border-slate-200 dark:border-slate-900 glow-indigo">
+                      <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-xs font-mono font-semibold tracking-wider text-slate-550 dark:text-slate-400 uppercase">Agents Online</CardTitle>
+                        <Users className="w-4 h-4 text-blue-500" />
+                      </CardHeader>
+                      <CardContent className="space-y-1.5">
+                        <div className="text-3xl font-bold text-slate-800 dark:text-white font-mono">{rcData.metrics.agentsOnline}</div>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400">Active Extensions monitored: {rcData.extensions?.length || 0}</p>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* SLA Status Legend */}
+                  <div className="flex items-center gap-4 text-[10px] text-slate-500 dark:text-slate-400 pt-1 px-1">
+                    <span className="font-mono font-semibold uppercase tracking-wider">SLA Status:</span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> OK
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" /> Warning
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-red-500 inline-block" /> Critical
+                    </span>
+                  </div>
                 </div>
               )}
 

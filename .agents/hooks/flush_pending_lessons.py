@@ -200,7 +200,7 @@ def main() -> None:
                 agent = entry.get("agent") or "IDE Agent"
                 tags = entry.get("tags") or []
                 embedding = entry.get("embedding")
-                container_tag = entry.get("containerTag", "antigravity-project")
+                container_tag = entry.get("containerTag", "telemetry-dashboard")
 
                 supabase_synced = entry.get("supabase_synced", False)
 

@@ -8,6 +8,7 @@ import {
   fetchUserPhoneNumbers,
   getAgentPresenceCounts,
   getActiveQueueCount,
+  maskPII,
   type RingCentralCallLog,
   type RingCentralExtension 
 } from "@/lib/ringcentral";
@@ -258,8 +259,10 @@ export async function GET(request: Request) {
       .map((l: RingCentralCallLog) => ({
         id: l.id || `missed-${Math.random().toString(36).substr(2, 9)}`,
         startTime: l.startTime || "",
-        fromName: l.from?.name || "Unknown",
-        fromNumber: l.from?.phoneNumber || "Unknown",
+        ...(() => {
+          const { maskedName, maskedPhone } = maskPII(l.from?.name, l.from?.phoneNumber);
+          return { fromName: maskedName, fromNumber: maskedPhone };
+        })(),
         toName: l.to?.name || "Support",
         toNumber: l.to?.extensionNumber || "Support",
         duration: l.duration || 0,

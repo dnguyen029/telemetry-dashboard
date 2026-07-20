@@ -324,3 +324,27 @@ export async function fetchUserPhoneNumbers(
   }
   return userPhoneNumbers;
 }
+
+/**
+ * Anonymizes caller PII before sending to the browser or caching.
+ * - Names: "John Smith" → "John S."
+ * - Phones: "+12065550199" → "+1206555****"
+ */
+export function maskPII(
+  name: string | undefined,
+  phone: string | undefined
+): { maskedName: string; maskedPhone: string } {
+  const maskedName = name
+    ? name
+        .trim()
+        .split(" ")
+        .map((part, i) => (i === 0 ? part : part.charAt(0) + "."))
+        .join(" ")
+    : "Unknown";
+
+  const maskedPhone = phone
+    ? phone.replace(/(\d{4})$/, "****")
+    : "Unknown";
+
+  return { maskedName, maskedPhone };
+}

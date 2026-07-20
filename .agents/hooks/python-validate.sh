@@ -2,7 +2,7 @@
 # Refactored Python validator utilizing the project's virtual environment and targeted testing
 
 TARGET_FILE="$AG_TOOL_ARG_FilePath"
-PROJECT_ROOT="/home/dnguyen029/antigravity-project"
+PROJECT_ROOT="/home/dnguyen029/telemetry-dashboard"
 VENV_BIN="$PROJECT_ROOT/.venv/bin"
 
 if [[ "$TARGET_FILE" == *".py" ]]; then

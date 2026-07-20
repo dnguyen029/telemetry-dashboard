@@ -2,7 +2,7 @@
 
 Welcome to your clean Antigravity 2.0 workspace! This is a simple, no-code guide to help you interact with your agent team, tag specialists, and use commands in your daily workflow.
 
-\*Back to **[Workspace Dashboard](file:///home/dnguyen029/antigravity-project/.agents/docs/dashboard.md)\***
+\*Back to **[Workspace Dashboard](file:///home/dnguyen029/telemetry-dashboard/.agents/docs/dashboard.md)\***
 
 ---
 
@@ -44,7 +44,7 @@ Type `/` in the chat input bar to trigger automated shortcuts.
 
 ## 🔌 Pre-Flight Check
 
-To verify the health and connectivity of the tool servers (Exa, Supabase, TOON, Context MCP), run the connection verifier. Refer to **[bootstrap.md](file:///home/dnguyen029/antigravity-project/bootstrap.md)** for execution details.
+To verify the health and connectivity of the tool servers (Exa, Supabase, TOON, Context MCP), run the connection verifier. Refer to **[bootstrap.md](file:///home/dnguyen029/telemetry-dashboard/bootstrap.md)** for execution details.
 
 ---
 

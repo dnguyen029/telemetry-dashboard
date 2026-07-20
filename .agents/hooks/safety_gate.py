@@ -124,7 +124,7 @@ def main():
         path_arg_clean = path_arg.rstrip("/")
         
         # Block scanning workspace root or home too broadly
-        if path_arg_clean in ["", "/", "/home", "/home/dnguyen029", "/home/dnguyen029/antigravity-project"]:
+        if path_arg_clean in ["", "/", "/home", "/home/dnguyen029", "/home/dnguyen029/telemetry-dashboard"]:
             if tool_name == "grep_search":
                 # Look for alternative common variations of "Query"
                 query_arg = arguments.get("Query") or arguments.get("query") or arguments.get("pattern") or ""
@@ -163,7 +163,7 @@ def main():
             paths_to_check = []
             if artifact_dir:
                 paths_to_check.append(os.path.join(artifact_dir, plan_file))
-            paths_to_check.append(os.path.join("/home/dnguyen029/antigravity-project", plan_file))
+            paths_to_check.append(os.path.join("/home/dnguyen029/telemetry-dashboard", plan_file))
             paths_to_check.append(plan_file)
             
             plan_to_read = None

@@ -14,9 +14,9 @@ This document defines the host environment specification for the active workspac
 ## 💻 Environment Specifications
 
 - **OS**: Linux (Asus Chromebook Plus Linux container)
-- **Active Workspace Directory**: `/home/dnguyen029/antigravity-project`
-- **Active Python Virtual Environment**: `/home/dnguyen029/antigravity-project/.venv/bin/python3`
-- **Toon Server Runtime**: `/home/dnguyen029/antigravity-project/.agents/skills/toon-mcp/mcp-server-toon/.venv/bin/python`
+- **Active Workspace Directory**: `/home/dnguyen029/telemetry-dashboard`
+- **Active Python Virtual Environment**: `/usr/bin/python3`
+- **Toon Server Runtime**: `/home/dnguyen029/telemetry-dashboard/.agents/skills/toon-mcp/mcp-server-toon/.venv/bin/python`
 - **Global IDE Application Data Directory**: `/home/dnguyen029/.gemini/antigravity-ide/`
 - **Active CLI Execution Path**: `/home/dnguyen029/.local/bin/agy`
 
@@ -24,11 +24,11 @@ This document defines the host environment specification for the active workspac
 
 - **Database (Supabase)**: Configured using stdio `mcp-remote` connection wrapper in [mcp_config.json](file:///home/dnguyen029/.gemini/antigravity-ide/mcp_config.json).
 - **Search (Exa)**: Configured via `exa` MCP tool mappings.
-- **Environment Variables**: Loaded dynamically from local project [.env](file:///home/dnguyen029/antigravity-project/.env).
+- **Environment Variables**: Loaded dynamically from local project [.env](file:///home/dnguyen029/telemetry-dashboard/.env).
 
 > [!WARNING]
 > **🚨 CRITICAL ENVIRONMENT MANDATES (DO NOT ALTER)**
-> * **Python Interpreter Lock**: The workspace interpreter settings in `.vscode/settings.json` MUST remain locked to `/home/dnguyen029/antigravity-project/.venv/bin/python`. Do NOT modify this to point to any global virtual environments, as doing so breaks standard IDE extension activation and throws the error `command 'python-envs.set' not found`.
+> * **Python Interpreter Lock**: The workspace interpreter settings in `.vscode/settings.json` MUST remain locked to `/home/dnguyen029/telemetry-dashboard/.venv/bin/python`. Do NOT modify this to point to any global virtual environments, as doing so breaks standard IDE extension activation and throws the error `command 'python-envs.set' not found`.
 > * **Stdio Wrapper Mandate**: Remote HTTP/SSE server configurations in `mcp_config.json` (such as Supabase and Exa) MUST utilize the `npx -y mcp-remote` stdio wrapper for the Go-based IDE loader. Do NOT configure direct HTTP/SSE properties in the local IDE configurations.
 
 ## 💡 Usage Mandate

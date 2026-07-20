@@ -216,7 +216,7 @@ def main():
                         "supabase_synced": supabase_synced,
                         "supermemory_synced": True, # set True to satisfy any legacy schema checks
                         "retry_count": 0,
-                        "containerTag": "antigravity-project"
+                        "containerTag": "telemetry-dashboard"
                     })
 
                     with open(queue_path, "w", encoding="utf-8") as qf:

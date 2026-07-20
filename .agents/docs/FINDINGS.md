@@ -9,9 +9,9 @@ All codebase adjustments have been inspected and confirmed to conform structural
 | Rule / Principle                         | Verification Status | Evaluation Details                                                                                                                                                                      |
 | :--------------------------------------- | :-----------------: | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Rule 1: Dynamic Header Pass-thru**     |     **PASSED**      | Programmatic verification successfully bypasses the disconnected Supabase SSE node when credentials are absent, preventing fatal initialization boots.                                  |
-| **Rule 2: Sovereign Database Custody**   |     **PASSED**      | Non-librarian swarm agents are strictly pruned of Supabase/Supermemory credentials in [swarm_orchestrator.py](file:///home/dnguyen029/antigravity-project/swarm_orchestrator.py).       |
+| **Rule 2: Sovereign Database Custody**   |     **PASSED**      | Non-librarian swarm agents are strictly pruned of Supabase/Supermemory credentials in [swarm_orchestrator.py](file:///home/dnguyen029/telemetry-dashboard/swarm_orchestrator.py).       |
 | **Rule 3: Hermetic Workspace Isolation** |     **PASSED**      | Local paths are configured natively, and standard environment keys are loaded exclusively from isolated environment configurations without leaking global environment states.           |
-| **Rule 4: Receptionist Encapsulation**   |     **PASSED**      | Instructions and prompt logic remain completely isolated inside [receptionist.txt](file:///home/dnguyen029/antigravity-project/.agents/agents/receptionist.txt) with zero code leakage. |
+| **Rule 4: Receptionist Encapsulation**   |     **PASSED**      | Instructions and prompt logic remain completely isolated inside [receptionist.txt](file:///home/dnguyen029/telemetry-dashboard/.agents/agents/receptionist.txt) with zero code leakage. |
 
 ---
 
@@ -45,9 +45,9 @@ INSERT INTO swarm_knowledge_archive (
   - **Config Syntax Fix**: Trailing comma in `mcp_config.json` caused Go-based IDE language server parser crash (`GetMcpServerStates` error). Trailing comma removed.
   - **Filesystem MCP Deprecation**: Local schema `/home/dnguyen029/.gemini/antigravity/mcp/filesystem` was deleted and hardcoded handshake references removed from the verifier script. Antigravity 2.0 uses native file tools.
   - **Process Hygiene**: Orphaned redundant `mcp-server-redis` background processes (`PID 3905` and `PID 4070`) spawned under `systemd` were identified and terminated.
-  - **Exa Search Priority Mandate**: Added `Rule 3 — Exa Search Priority` to [AGENTS.md](file:///home/dnguyen029/antigravity-project/.agents/rules/AGENTS.md) and coded the mandate directly into the Boundaries & Constraints of all individual agent cards (`orchestrator.txt`, `auditor.txt`, `builder.txt`, `librarian.txt`, `sre.txt`) to ensure they prioritize Exa MCP search tools to prevent token bloat.
+  - **Exa Search Priority Mandate**: Added `Rule 3 — Exa Search Priority` to [AGENTS.md](file:///home/dnguyen029/telemetry-dashboard/.agents/rules/AGENTS.md) and coded the mandate directly into the Boundaries & Constraints of all individual agent cards (`orchestrator.txt`, `auditor.txt`, `builder.txt`, `librarian.txt`, `sre.txt`) to ensure they prioritize Exa MCP search tools to prevent token bloat.
   - **JS Agent Deprecation & Python Fresh Start**: Formally decommissioned all legacy JavaScript/Node.js agent structures and configs (`subagents.yaml`, `swarm-config.yaml`). The workspace is now fully re-anchored on 100% Python-native agents under the Antigravity 2.0 SDK.
-  - **Memory Sanitization & Filtering**: Hardened [.agents/agents/librarian.txt](file:///home/dnguyen029/antigravity-project/.agents/agents/librarian.txt) and [librarian.md](file:///home/dnguyen029/antigravity-project/.agents/rules/librarian.md) with a strict mandate to filter out/ignore any retrieved legacy JavaScript or "Sovereign" memories, preventing stale data injections.
+  - **Memory Sanitization & Filtering**: Hardened [.agents/agents/librarian.txt](file:///home/dnguyen029/telemetry-dashboard/.agents/agents/librarian.txt) and [librarian.md](file:///home/dnguyen029/telemetry-dashboard/.agents/rules/librarian.md) with a strict mandate to filter out/ignore any retrieved legacy JavaScript or "Sovereign" memories, preventing stale data injections.
 - **Result**: `mcp_config.json` parses cleanly; verification script passes; agent rules, cards, and codebase updated to Python-only with legacy memory filtering active.
 
 ---
@@ -69,10 +69,10 @@ INSERT INTO swarm_knowledge_archive (
 
 - **Goal**: Verify robust compilation-based self-healing and automatic rollback routines of the active swarm.
 - **Findings**:
-  - **Syntax Fault Isolation**: A deliberate syntax fault `invalid_syntax_error = @@@` was staged at line 470 in [verify_mcp_connections.py](file:///home/dnguyen029/antigravity-project/app_build/verify_mcp_connections.py).
+  - **Syntax Fault Isolation**: A deliberate syntax fault `invalid_syntax_error = @@@` was staged at line 470 in [verify_mcp_connections.py](file:///home/dnguyen029/telemetry-dashboard/app_build/verify_mcp_connections.py).
   - **Phase 3 Compilation Interdiction**: During the `native_orchestrator` execution's syntax-checking step, the python compile engine intercepted the AST violation cleanly and rejected staging.
-  - **Successful State Restoration**: Checked and confirmed that the git automated checkout pipeline automatically triggered, restoring [verify_mcp_connections.py](file:///home/dnguyen029/antigravity-project/app_build/verify_mcp_connections.py) to a pristine compilation state.
-  - **Real-Time State Validation**: [agent_live.md](file:///home/dnguyen029/antigravity-project/agent_live.md) transitions and states were correctly monitored, with [walkthrough.md](file:///home/dnguyen029/antigravity-project/walkthrough.md) compiled to capture the diagnostic results.
+  - **Successful State Restoration**: Checked and confirmed that the git automated checkout pipeline automatically triggered, restoring [verify_mcp_connections.py](file:///home/dnguyen029/telemetry-dashboard/app_build/verify_mcp_connections.py) to a pristine compilation state.
+  - **Real-Time State Validation**: [agent_live.md](file:///home/dnguyen029/telemetry-dashboard/agent_live.md) transitions and states were correctly monitored, with [walkthrough.md](file:///home/dnguyen029/telemetry-dashboard/walkthrough.md) compiled to capture the diagnostic results.
 - **Result**: 100% of workspace modules successfully compile and pass verification. State successfully archived to permanent databases.
 
 ---
@@ -81,9 +81,9 @@ INSERT INTO swarm_knowledge_archive (
 
 - **Goal**: Refactor workspace directory structure, agent personas, rules, and workflows to conform to the Antigravity 2.0 standards.
 - **Findings**:
-  - **Directory Partitioning**: Moved all source code (`main.py`, `receptionist/`, `tests/`, `tools/`, `package.json`, etc.) into [app_build/](file:///home/dnguyen029/antigravity-project/app_build/) and all deliverable planning files (`walkthrough.md`, `task.md`, etc.) into [production_artifacts/](file:///home/dnguyen029/antigravity-project/production_artifacts/).
+  - **Directory Partitioning**: Moved all source code (`main.py`, `receptionist/`, `tests/`, `tools/`, `package.json`, etc.) into [app_build/](file:///home/dnguyen029/telemetry-dashboard/app_build/) and all deliverable planning files (`walkthrough.md`, `task.md`, etc.) into [production_artifacts/](file:///home/dnguyen029/telemetry-dashboard/production_artifacts/).
   - **Persona Upgrades**: Updated the active agent cards (`orchestrator`, `builder`, `auditor`, and `sre`) to follow the 2.0 Product Manager, Engineer, QA, and DevOps constraints while keeping original file names. Archived the legacy files and deprecated roles to `/home/dnguyen029/archived_swarm/agents/`.
-  - **Command Automation**: Registered the `/startcycle` sequence under [.agents/workflows/startcycle.md](file:///home/dnguyen029/antigravity-project/.agents/workflows/startcycle.md) for automated agent-to-agent handovers.
+  - **Command Automation**: Registered the `/startcycle` sequence under [.agents/workflows/startcycle.md](file:///home/dnguyen029/telemetry-dashboard/.agents/workflows/startcycle.md) for automated agent-to-agent handovers.
 - **Result**: Workspace structurally compliant with 2.0 specs; walkthrough and deliverables cleanly separated.
 
 ---
@@ -93,15 +93,15 @@ INSERT INTO swarm_knowledge_archive (
 - **Goal**: Verify status of `context7` and `sequential-thinking` MCP servers and resolve connection hangs.
 - **Findings**:
   - **Process Hygiene**: Identified and terminated multiple duplicate/orphaned background MCP processes (including duplicate `mcp-remote` and python servers) from previous sessions that were causing port and connection conflicts.
-  - **Tool Handshake**: Programmatically verified standard connectivity using the verification suite ([verify_mcp_connections.py](file:///home/dnguyen029/antigravity-project/app_build/verify_mcp_connections.py)). Verified `context7` connects successfully with active tools (`resolve-library-id`, `query-docs`).
+  - **Tool Handshake**: Programmatically verified standard connectivity using the verification suite ([verify_mcp_connections.py](file:///home/dnguyen029/telemetry-dashboard/app_build/verify_mcp_connections.py)). Verified `context7` connects successfully with active tools (`resolve-library-id`, `query-docs`).
   - **Built-in Verification**: Confirmed `sequential-thinking` is running natively as an IDE built-in.
-- **Result**: 100% of configured tool servers successfully verified (7/7 connected); updated [system_status_report.md](file:///home/dnguyen029/antigravity-project/production_artifacts/system_status_report.md) exported.
+- **Result**: 100% of configured tool servers successfully verified (7/7 connected); updated [system_status_report.md](file:///home/dnguyen029/telemetry-dashboard/production_artifacts/system_status_report.md) exported.
 
 ---
 
 ## 🔧 Workspace Lifecycle Hooks Hardening (June 4, 2026 - Session 3)
 
-- **Goal**: Harden [hooks.json](file:///home/dnguyen029/antigravity-project/.agents/hooks.json) to prevent CWD-drift or environment-resolution failures during tool execution.
+- **Goal**: Harden [hooks.json](file:///home/dnguyen029/telemetry-dashboard/.agents/hooks.json) to prevent CWD-drift or environment-resolution failures during tool execution.
 - **Findings**:
   - **Path Resolution**: The `safety-gate` hook command was using `/usr/bin/env python3` and a relative file path `.agents/hooks/safety_gate.py`. If the workspace run directory changed, this relative path would fail to resolve.
   - **Hardening Change**: Standardized the `PreToolUse` hook command to use the absolute virtual environment python path and the absolute script path, aligning it with all other invocation and dashboard hooks.
@@ -114,8 +114,8 @@ INSERT INTO swarm_knowledge_archive (
 - **Goal**: Resolve duplicate/orphaned `google-conversational-agents` MCP server processes and fix signature matching.
 - **Findings**:
   - **Orphan Cleanup**: Safely terminated the duplicate orphaned `google-conversational-agents` proxy process (PID `19569`) reparented under `systemd`.
-  - **Enhanced Verifier Matching**: Refactored `kill_orphaned_mcp_servers` in [verify_mcp_connections.py](file:///home/dnguyen029/antigravity-project/app_build/verify_mcp_connections.py) to dynamically extract URL domains (e.g., `ces.googleapis.com`, `mcp.supermemory.ai`) and parse individual arguments into tokens instead of performing literal substring checks against unexpanded template variables (like `$ACCESS_TOKEN`), ensuring robust orphan detection.
-  - **Telemetry Sync**: Successfully validated and logged the lessons learned vector embedding to Supabase and synced [pending_lessons.json](file:///home/dnguyen029/antigravity-project/pending_lessons.json) for Supermemory archival.
+  - **Enhanced Verifier Matching**: Refactored `kill_orphaned_mcp_servers` in [verify_mcp_connections.py](file:///home/dnguyen029/telemetry-dashboard/app_build/verify_mcp_connections.py) to dynamically extract URL domains (e.g., `ces.googleapis.com`, `mcp.supermemory.ai`) and parse individual arguments into tokens instead of performing literal substring checks against unexpanded template variables (like `$ACCESS_TOKEN`), ensuring robust orphan detection.
+  - **Telemetry Sync**: Successfully validated and logged the lessons learned vector embedding to Supabase and synced [pending_lessons.json](file:///home/dnguyen029/telemetry-dashboard/pending_lessons.json) for Supermemory archival.
 - **Result**: All 6 configured tool servers verified connected successfully (6/6 connected); verifier script correctly identifies and handles dynamic argument states.
 
 ---
@@ -128,9 +128,9 @@ _Verification logged and marked complete by Technical Writer / Librarian._
 
 - **Goal**: Resolve the pre-invocation hook crash caused by Supermemory API 402 Payment Required errors, and configure the Python PostToolUse quality-gate validation hook.
 - **Findings**:
-  - **Hook Failure Resilience**: Replaced the blocking `sys.exit(1)` call in [flush_pending_lessons.py](file:///home/dnguyen029/antigravity-project/.agents/hooks/flush_pending_lessons.py) with a graceful logging routine and `return False` when Supermemory returns `402 Payment Required` (token/quota limit reached).
-  - **Queue File Repair**: Initialized [pending_lessons.json](file:///home/dnguyen029/antigravity-project/pending_lessons.json) with `[]` to fix its corrupted/truncated state.
-  - **Quality-Gate Integration**: Created [python-validate.sh](file:///home/dnguyen029/antigravity-project/.agents/hooks/python-validate.sh) to automate code formatting via Ruff (with `uv run` fallback) and targeted test suite execution via Pytest only on changed files, and registered it in [hooks.json](file:///home/dnguyen029/antigravity-project/.agents/hooks.json).
+  - **Hook Failure Resilience**: Replaced the blocking `sys.exit(1)` call in [flush_pending_lessons.py](file:///home/dnguyen029/telemetry-dashboard/.agents/hooks/flush_pending_lessons.py) with a graceful logging routine and `return False` when Supermemory returns `402 Payment Required` (token/quota limit reached).
+  - **Queue File Repair**: Initialized [pending_lessons.json](file:///home/dnguyen029/telemetry-dashboard/pending_lessons.json) with `[]` to fix its corrupted/truncated state.
+  - **Quality-Gate Integration**: Created [python-validate.sh](file:///home/dnguyen029/telemetry-dashboard/.agents/hooks/python-validate.sh) to automate code formatting via Ruff (with `uv run` fallback) and targeted test suite execution via Pytest only on changed files, and registered it in [hooks.json](file:///home/dnguyen029/telemetry-dashboard/.agents/hooks.json).
 - **Result**: Pre-flight hook executes successfully with exit code 0. Quality gate runs formatting and targeted unit tests automatically without blocking developers.
 
 ---

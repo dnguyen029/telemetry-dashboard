@@ -12,7 +12,7 @@ workspace.
 
 ## 💻 Host Environment & Key Paths
 
-All agents **MUST** read the central **[bootstrap.md](file:///home/dnguyen029/antigravity-project/bootstrap.md)**, the master knowledge index **[INDEX.md](file:///home/dnguyen029/antigravity-project/INDEX.md)**, and the cached lessons learned **[lessons_context.md](file:///home/dnguyen029/antigravity-project/.agents/lessons_context.md)** during their initialization/discovery phase to align themselves with the host environment specifications, map the workspace architectural layout, and review past learnings.
+All agents **MUST** read the central **[bootstrap.md](file:///home/dnguyen029/telemetry-dashboard/bootstrap.md)**, the master knowledge index **[INDEX.md](file:///home/dnguyen029/telemetry-dashboard/INDEX.md)**, and the cached lessons learned **[lessons_context.md](file:///home/dnguyen029/telemetry-dashboard/.agents/lessons_context.md)** during their initialization/discovery phase to align themselves with the host environment specifications, map the workspace architectural layout, and review past learnings.
 
 ---
 
@@ -22,8 +22,8 @@ All agents **MUST** read the central **[bootstrap.md](file:///home/dnguyen029/an
   complex, custom orchestration frameworks or "bolt-on" files.
 - **Auditing**: Always prioritize simple, readable Python scripts that are easily audited.
 - **Swarm Mandates**: All agents MUST comply with the rules and process gates documented in the central
-  **[AGENTS.md](file:///home/dnguyen029/antigravity-project/.agents/rules/AGENTS.md)**.
-- **Master Index Mandate**: All agents MUST read the workspace **[INDEX.md](file:///home/dnguyen029/antigravity-project/INDEX.md)** on cold start to map files, directories, and dependencies cleanly without guessing paths.
+  **[AGENTS.md](file:///home/dnguyen029/telemetry-dashboard/.agents/rules/AGENTS.md)**.
+- **Master Index Mandate**: All agents MUST read the workspace **[INDEX.md](file:///home/dnguyen029/telemetry-dashboard/INDEX.md)** on cold start to map files, directories, and dependencies cleanly without guessing paths.
 
 ---
 
@@ -34,7 +34,7 @@ All agents **MUST** read the central **[bootstrap.md](file:///home/dnguyen029/an
 >
 > - **Swarm Orchestration Mandate**: If the user triggers `/orchestrate` or requests orchestration, you **MUST**
 >   execute the multi-agent swarm flow (Orchestrator ➔ Builder ➔ Auditor ➔ SRE) exactly as defined in
->   [orchestrate.md](file:///home/dnguyen029/antigravity-project/.agents/workflows/orchestrate.md). Single-agent
+>   [orchestrate.md](file:///home/dnguyen029/telemetry-dashboard/.agents/workflows/orchestrate.md). Single-agent
 >   bypass is strictly prohibited. The core quartet can explicitly invoke the **Researcher** agent for documentation lookups, memory audits, or complex diagnostic/RCA support, and the **Librarian** agent for final archival/logging phases.
 > - **Plan Approval Gate**: You **MUST** draft an `implementation_plan.md` first and halt execution for user
 >   approval before making any code or config changes.
@@ -60,4 +60,4 @@ All agents **MUST** read the central **[bootstrap.md](file:///home/dnguyen029/an
     * Do not use polite, apologetic, or validating pleasantries (e.g., "You are completely correct," "That is a very fair point," "Great question!", "Excellent idea", "Thank you for keeping me grounded").
     * Keep response introductions and conclusions completely direct and neutral, focusing purely on facts and code without conversational padding.
   - **Safety Boundaries**: Strictly adhere to the cost limits, destructive action blocks, and security guidelines
-    defined in **[guardrails.md](file:///home/dnguyen029/antigravity-project/guardrails.md)**.
+    defined in **[guardrails.md](file:///home/dnguyen029/telemetry-dashboard/guardrails.md)**.

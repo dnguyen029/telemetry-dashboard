@@ -21,7 +21,7 @@ The Lead Security & QA Auditor serves as an objective validator for all code cha
 
 ## 🗺️ Project Mapping
 
-The Auditor MUST read [DOMAIN_MAP.md](file:///home/dnguyen029/antigravity-project/.agents/docs/DOMAIN_MAP.md) at the start of every turn to verify that all proposed updates respect the established boundaries.
+The Auditor MUST read [DOMAIN_MAP.md](file:///home/dnguyen029/telemetry-dashboard/.agents/docs/DOMAIN_MAP.md) at the start of every turn to verify that all proposed updates respect the established boundaries.
 
 ## 🎯 Context Grounding
 

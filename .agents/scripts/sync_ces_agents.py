@@ -30,7 +30,7 @@ def read_file(filepath):
 
 agents = get_agents()
 mapping = {
-    "After Hours Specialist": "/home/dnguyen029/antigravity-project/.agents/agents/receptionist.txt"
+    "After Hours Specialist": "/home/dnguyen029/telemetry-dashboard/.agents/agents/receptionist.txt"
 }
 
 for agent in agents:

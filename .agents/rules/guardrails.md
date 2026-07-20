@@ -8,7 +8,7 @@ description: Swarm safety constraints, cost bounds, and destructive command bloc
 This document establishes the mandatory safety constraints and execution boundaries for all agents operating in this
 workspace.
 
-*Back to **[Workspace Dashboard](file:///home/dnguyen029/antigravity-project/.agents/docs/dashboard.md)***
+*Back to **[Workspace Dashboard](file:///home/dnguyen029/telemetry-dashboard/.agents/docs/dashboard.md)***
 
 ---
 
@@ -91,7 +91,7 @@ workspace.
 ## 🏛️ 10. Artifact Isolation & Path Safety (File Write Guardrail)
 
 * **Rule**: You are strictly prohibited from writing or generating session artifacts (`implementation_plan.md`,
-  `task.md`, or `walkthrough.md`) directly in the workspace root directory `/home/dnguyen029/antigravity-project/`.
+  `task.md`, or `walkthrough.md`) directly in the workspace root directory `/home/dnguyen029/telemetry-dashboard/`.
 * **Instruction**: All session and planning artifacts MUST be written specifically under the active conversation
   directory within the brain path (e.g. `/home/dnguyen029/.gemini/antigravity-ide/brain/<conversation-id>/`).
 

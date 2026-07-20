@@ -4,7 +4,7 @@ description: Perform a comprehensive codebase architectural and quality review.
 
 When the user types `/review`, coordinate the agents as follows:
 
-1. Act as the **orchestrator** (Principal Architect) to scan the workspace directory and identify the core components, layout, and active stack based on [bootstrap.md](file:///home/dnguyen029/antigravity-project/bootstrap.md).
+1. Act as the **orchestrator** (Principal Architect) to scan the workspace directory and identify the core components, layout, and active stack based on [bootstrap.md](file:///home/dnguyen029/telemetry-dashboard/bootstrap.md).
 2. Analyze the high-level architecture and data flows across these components.
 3. Coordinate with the **auditor** (Lead Security & QA Auditor) to inspect codebase files and identify:
    - Poor design choices or overly complex structures.

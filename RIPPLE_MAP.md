@@ -33,7 +33,7 @@
 
 | Primary Anchor | Downstream Echoes (MUST SYNC) | Check Command / Method |
 | :--- | :--- | :--- |
-| **Supabase schema** (`lessons_learned`) | [`.agents/hooks/sync_context.py`](file:///home/dnguyen029/telemetry-dashboard/.agents/hooks/sync_context.py), [`app_build/main.py`](file:///home/dnguyen029/telemetry-dashboard/app_build/main.py) | Run python .agents/hooks/sync_context.py to sync active context |
+| **Supabase schema** (`lessons_learned`) | [`.agents/hooks/sync_context.py`](file:///home/dnguyen029/telemetry-dashboard/.agents/hooks/sync_context.py), [`app_build/main.py`](file:///home/dnguyen029/telemetry-dashboard/app_build/main.py) | Run `python .agents/hooks/sync_context.py` to sync with Supermemory |
 | **`.agents/hooks.json`** (Hook Registry) | [`.agents/hooks/flush_pending_lessons.py`](file:///home/dnguyen029/telemetry-dashboard/.agents/hooks/flush_pending_lessons.py), [`.agents/hooks/archive_lessons.py`](file:///home/dnguyen029/telemetry-dashboard/.agents/hooks/archive_lessons.py) | Any new hook file MUST be registered in `hooks.json` PreInvocation or PostInvocation |
 | **`pending_lessons.json`** (Retry Queue) | [`.agents/hooks/flush_pending_lessons.py`](file:///home/dnguyen029/telemetry-dashboard/.agents/hooks/flush_pending_lessons.py) | Queue is auto-flushed on session boot; max 10 retries per lesson before drop |
 | **Active Task State** | [`production_artifacts/agent_live.md`](file:///home/dnguyen029/telemetry-dashboard/production_artifacts/agent_live.md) | Check Mermaid execution graph status |
@@ -44,7 +44,7 @@
 
 | Primary Anchor | Downstream Echoes (MUST SYNC) | Check Command / Method |
 | :--- | :--- | :--- |
-| **Agent Parameter** (e.g. `phone_number`) | [`RECEPTIONIST_SOP.md`](file:///home/dnguyen029/telemetry-dashboard/.agents/docs/RECEPTIONIST_SOP.md), [`app_build/receptionist/app/tools.py`](file:///home/dnguyen029/telemetry-dashboard/app_build/receptionist/app/tools.py), [`app_build/receptionist/app/tools_lib/sheets.py`](file:///home/dnguyen029/telemetry-dashboard/app_build/receptionist/app/tools_lib/sheets.py), [`app_build/receptionist/app/tools_lib/zendesk.py`](file:///home/dnguyen029/telemetry-dashboard/app_build/receptionist/app/tools_lib/zendesk.py), [`app_build/tools/sheets.py`](file:///home/dnguyen029/telemetry-dashboard/app_build/tools/sheets.py), [`app_build/main.py`](file:///home/dnguyen029/telemetry-dashboard/app_build/main.py) | Verify Pydantic models and function signatures match the agent parameters and Google Sheet header names exactly. |
+| **Agent Parameter** (e.g. `phone_number`) | [`RECEPTIONIST_SOP.md`](file:///home/dnguyen029/telemetry-dashboard/.agents/docs/RECEPTIONIST_SOP.md), [`app_build/receptionist/app/tools.py`](file:///home/dnguyen029/telemetry-dashboard/app_build/receptionist/app/tools.py), [`app_build/receptionist/app/tools_lib/sheets.py`](file:///home/dnguyen029/telemetry-dashboard/app_build/receptionist/app/tools_lib/sheets.py), [`app_build/receptionist/app/tools_lib/zendesk.py`](file:///home/dnguyen029/telemetry-dashboard/app_build/receptionist/app/tools_lib/zendesk.py), [`app_build/main.py`](file:///home/dnguyen029/telemetry-dashboard/app_build/main.py) | Verify Pydantic models and function signatures match the agent parameters and Google Sheet header names exactly. |
 
 ---
 
@@ -54,7 +54,7 @@
 
 | Primary Anchor | Downstream Echoes (MUST SYNC) | Check Command / Method |
 | :--- | :--- | :--- |
-| **Agent Prompts** ([`.agents/agents/`](file:///home/dnguyen029/telemetry-dashboard/.agents/agents/)) | Local packaged directory ([`app_build/receptionist/app/agents/`](file:///home/dnguyen029/telemetry-dashboard/app_build/receptionist/app/agents/)) | Copy prompts into local packaged directory before running `agents-cli deploy` |
+| **Agent Prompts** ([`app_build/receptionist/app/agents/`](file:///home/dnguyen029/telemetry-dashboard/app_build/receptionist/app/agents/)) | Vertex AI Reasoning Engine & CX Agent Studio Console | Run `agents-cli deploy --no-confirm-project` to synchronize prompts to the cloud |
 | **ADK Graph Logic / Prompts** ([`app_build/receptionist/`](file:///home/dnguyen029/telemetry-dashboard/app_build/receptionist/)) | Vertex AI Reasoning Engine & CX Agent Studio Console | Run `agents-cli deploy --no-confirm-project` to synchronize both the Cloud Run deployment and the CX Agent Studio Console |
 
 ---

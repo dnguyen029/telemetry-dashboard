@@ -71,7 +71,7 @@ def check_orphaned_supermemory_processes():
 
 def verify_python_env():
     """Verifies that the python environment matches the bootstrap.md specification."""
-    expected_interpreter = "/home/dnguyen029/antigravity-project/.venv/bin/python"
+    expected_interpreter = "/home/dnguyen029/telemetry-dashboard/.venv/bin/python"
     current_executable = sys.executable
     if not current_executable.startswith(expected_interpreter):
         logger.warning(f"Python interpreter mismatch. Expected: {expected_interpreter}*, got: {current_executable}")

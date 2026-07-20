@@ -2,7 +2,7 @@
 
 This document defines the architecture, files, endpoints, schemas, and guidelines for the decoupled Ariel Bath AI Receptionist system. It excludes legacy swarm orchestration details to serve as a clean source of truth for the receptionist product.
 
-*Back to **[Workspace Dashboard](file:///home/dnguyen029/antigravity-project/.agents/docs/dashboard.md)***
+*Back to **[Workspace Dashboard](file:///home/dnguyen029/telemetry-dashboard/.agents/docs/dashboard.md)***
 
 ---
 
@@ -29,27 +29,27 @@ All files relevant to the Receptionist system are organized below:
 
 ### 1. Agent Directives (Prompts)
 
-* **[After Hours Receptionist](file:///home/dnguyen029/antigravity-project/.agents/agents/receptionist.txt)**: Prompt instructing lead-capture behavior. [ACTIVE]
-* **[Router Agent](file:///home/dnguyen029/antigravity-project/.agents/agents/router.txt)**: Prompt for intent classification and subagent delegation. [ACTIVE] *(CRITICAL: The `{@AGENT: [Name]}` tags inside router.txt MUST exactly match the Display Names configured in the CES GUI, e.g., `{@AGENT: After Hours Specialist}`, NOT internal variable names, or CES will throw a strict validation error!)*
-* **[FAQ Receptionist](file:///home/dnguyen029/antigravity-project/.agents/agents/faq_receptionist.txt)**: Prompt for answering product/brand specifications. [ACTIVE]
-* **[WISMO Receptionist](file:///home/dnguyen029/antigravity-project/.agents/agents/wismo_receptionist.txt)**: Prompt for PO lookup and ticket status check. [ACTIVE]
+* **[After Hours Receptionist](file:///home/dnguyen029/telemetry-dashboard/.agents/agents/receptionist.txt)**: Prompt instructing lead-capture behavior. [ACTIVE]
+* **[Router Agent](file:///home/dnguyen029/telemetry-dashboard/.agents/agents/router.txt)**: Prompt for intent classification and subagent delegation. [ACTIVE] *(CRITICAL: The `{@AGENT: [Name]}` tags inside router.txt MUST exactly match the Display Names configured in the CES GUI, e.g., `{@AGENT: After Hours Specialist}`, NOT internal variable names, or CES will throw a strict validation error!)*
+* **[FAQ Receptionist](file:///home/dnguyen029/telemetry-dashboard/.agents/agents/faq_receptionist.txt)**: Prompt for answering product/brand specifications. [ACTIVE]
+* **[WISMO Receptionist](file:///home/dnguyen029/telemetry-dashboard/.agents/agents/wismo_receptionist.txt)**: Prompt for PO lookup and ticket status check. [ACTIVE]
 
 ### 2. Integration Tools & Code
 
-* **[Lead Logger (Sheets)](file:///home/dnguyen029/antigravity-project/app_build/receptionist/app/tools_lib/sheets.py)**: Production Python tool handling lead uploads to Google Sheets.
-* **[Zendesk Integration](file:///home/dnguyen029/antigravity-project/app_build/receptionist/app/tools_lib/zendesk.py)**: Production Python tool handling Zendesk ticket searches, updates, and creation.
-* **[Execution Entrypoint](file:///home/dnguyen029/antigravity-project/app_build/receptionist/app/tools.py)**: Production tools wrapper routing lead logging and WISMO lookup.
-* **[Legacy Webhook Simulation](file:///home/dnguyen029/antigravity-project/app_build/main.py)**: Root simulator webhook for offline testing.
-* **[Simulator Sheets Logger](file:///home/dnguyen029/antigravity-project/app_build/tools/sheets.py)**: Duplicate sheets client configured specifically for local simulation testing via the `main.py` entrypoint. Note: Any changes to Google Sheets schemas or row indices MUST be updated in both files to keep them in sync.
+* **[Lead Logger (Sheets)](file:///home/dnguyen029/telemetry-dashboard/app_build/receptionist/app/tools_lib/sheets.py)**: Production Python tool handling lead uploads to Google Sheets.
+* **[Zendesk Integration](file:///home/dnguyen029/telemetry-dashboard/app_build/receptionist/app/tools_lib/zendesk.py)**: Production Python tool handling Zendesk ticket searches, updates, and creation.
+* **[Execution Entrypoint](file:///home/dnguyen029/telemetry-dashboard/app_build/receptionist/app/tools.py)**: Production tools wrapper routing lead logging and WISMO lookup.
+* **[Legacy Webhook Simulation](file:///home/dnguyen029/telemetry-dashboard/app_build/main.py)**: Root simulator webhook for offline testing.
+* **[Simulator Sheets Logger](file:///home/dnguyen029/telemetry-dashboard/app_build/tools/sheets.py)**: Duplicate sheets client configured specifically for local simulation testing via the `main.py` entrypoint. Note: Any changes to Google Sheets schemas or row indices MUST be updated in both files to keep them in sync.
 
 ## 🚀 Updating & Deploying the Receptionist
 
 Because this system runs on a **hybrid architecture** (ADK Reasoning Engine + Dialogflow CX Generative Agents), modifying the text files locally does **NOT** automatically update the live phone number. 
 
-There are **two independent deployment steps** required whenever you modify a prompt (e.g., [router.txt](file:///home/dnguyen029/antigravity-project/.agents/agents/router.txt) or [receptionist.txt](file:///home/dnguyen029/antigravity-project/.agents/agents/receptionist.txt)):
+There are **two independent deployment steps** required whenever you modify a prompt (e.g., [router.txt](file:///home/dnguyen029/telemetry-dashboard/.agents/agents/router.txt) or [receptionist.txt](file:///home/dnguyen029/telemetry-dashboard/.agents/agents/receptionist.txt)):
 
 ### 1. Update the ADK Backend (Reasoning Engine)
-1. **Navigate**: `cd /home/dnguyen029/antigravity-project/app_build/receptionist`
+1. **Navigate**: `cd /home/dnguyen029/telemetry-dashboard/app_build/receptionist`
 2. **Trigger**: Execute `agents-cli deploy --region us-central1 --project arielcsx`
 3. **Wait**: It takes ~5-10 minutes for the Google Agent Platform to compile the new graph.
 
@@ -57,7 +57,7 @@ There are **two independent deployment steps** required whenever you modify a pr
 The live phone line connects directly to the Dialogflow CX Generative Agents, which must be **manually synchronized** with your local `.txt` prompts. **If you skip this step, the phone line will not reflect your prompt changes.**
 * **Option A (MCP Server - Preferred)**: Instruct the agent to use the `google-conversational-agents` (CES CX) MCP server to `update_agent` via the IDE. 
 * **Option B (Python Script - Fallback)**: If the MCP server stalls/times out (which frequently happens with large payloads), run the REST API script manually:
-  `python3 /home/dnguyen029/antigravity-project/app_build/receptionist/sync_ces_agents.py`
+  `python3 /home/dnguyen029/telemetry-dashboard/app_build/receptionist/sync_ces_agents.py`
 
 ### 3. Publish the New Version (GUI Required)
 Steps 1 and 2 only update the **Draft** state of the agent. Telephony channels are securely pinned to frozen **Published Versions** to prevent live breakage.
@@ -74,7 +74,7 @@ Steps 1 and 2 only update the **Draft** state of the agent. Telephony channels a
 * **Service Name**: `receptionist-prod` (hosted on Google Cloud Run in `us-central1`)
 * **Cloud Run Webhook Base URL**: `https://receptionist-prod-106093400023.us-central1.run.app`
 * **Dialogflow CX Webhook Integration**: `https://receptionist-prod-106093400023.us-central1.run.app/webhook/ringcentral`
-* **RingCentral Service Account Credentials**: `sheets-receptionist-sa@arielcsx.iam.gserviceaccount.com` (GCP Key file: [sheets-receptionist-key.json](file:///home/dnguyen029/antigravity-project/sheets-receptionist-key.json))
+* **RingCentral Service Account Credentials**: `sheets-receptionist-sa@arielcsx.iam.gserviceaccount.com` (GCP Key file: [sheets-receptionist-key.json](file:///home/dnguyen029/telemetry-dashboard/sheets-receptionist-key.json))
 * **GCP/MCP Authentication**: The `google-conversational-agents` MCP server authenticates via the `GOOGLE_APPLICATION_CREDENTIALS` environment variable in `.env`, which must point to the `sheets-receptionist-key.json` file.
 * **Primary Admin/Test Line**: `(424) 600-8056` (Ext. `125`)
 * **Authentication**: Google Default Identity (OIDC-based authentication)
