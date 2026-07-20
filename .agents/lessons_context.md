@@ -1,7 +1,88 @@
 # 🧠 Active lessons learned context (Ground Truth)
 <!-- Method: semantic -->
 
-## 📌 Walkthrough: Schema Alignment & WISMO Mock Data Removal (Date: N/A | Match Score: 0.613)
+## 📌 Walkthrough: Tech Lead Mode and `/consult` Workflow (Date: N/A | Match Score: 0.642)
+
+### Walkthrough: Tech Lead Mode and `/consult` Workflow
+
+We have successfully updated the workspace rules and workflows to support the proactive **Senior Tech Lead** advisory mode and the `/consult` slash command.
+
+#### Changes Completed
+
+##### 1. Updated Orchestrator Rules
+- **File**: [orchestrator.md](file:///home/dnguyen029/antigravity-project/.agents/rules/orchestrator.md)
+- **Description**: Added the **AI Technical Lead Mode** section under Operational Guidelines. This explicitly directs the orchestrator to:
+  - Ask clarifying questions.
+  - Challenge design decisions (Zero Sycophancy).
+  - Identify scaling, performance, security, and complexity risks.
+  - Suggest cleaner, simpler alternatives.
+  - Think long-term with a 5+ year maintainability perspective.
+  - Provide structured deliverables (architectural recommendations, tradeoffs, implementation paths).
+
+##### 2. Created `/consult` Slash Command Workflow
+- **File**: [consult.md](file:///home/dnguyen029/antigravity-project/.agents/workflows/consult.md)
+- **Description**: Scaffolded a template mapping the `/consult <topic_or_code>` command directly to the Orchestrator, guiding it to critique design/features without writing code or generating execution plans.
+
+---
+
+#### Verification Results
+
+##### YAML Frontmatter Validation
+We ran a metadata validation script on both the updated and newly created files to check for correct YAML parsing and required keys:
+- [orchestrator.md](file:///home/dnguyen029/antigravity-project/.agents/rules/orchestrator.md): **Passed**
+- [consult.md](file:///home/dnguyen029/antigravity-project/.agents/workflows/consult.md): **Passed**
+
+```text
+Checking: /home/dnguyen029/antigravity-project/.agents/rules/orchestrator.md
+  [OK] Parsed key-value pairs: {'trigger': 'model_decision', 'description': 'Orchestrator/Architect agent rules for high-level planning, task delegation, and technical strategy.', 'model': 'Gemini 3.1 Pro (High)'}
+Checking: /home/dnguyen029/antigravity-project/.agents/workflows/consult.md
+  [OK] Parsed key-value pairs: {'description': 'Get a tech lead consult, architectural critique, and risk analysis on an idea or design draft.'}
+SUCCESS: All frontmatters are valid.
+```text
+
+The system is now fully aligned with the senior advisor behaviors.
+
+## 📌 Rule File Streamlining & Token Optimization (Date: N/A | Match Score: 0.620)
+
+Consolidated all Swarm Rules & Mandates into AGENTS.md (Rules 1-10) and refactored GEMINI.md to focus solely on model environment configuration and communication guidelines. Linked files directly and updated orchestrator target references to native_orchestrator.py, saving ~500 system prompt tokens.
+
+## 📌 Walkthrough: Context Management & Memory Refactoring (Date: N/A | Match Score: 0.613)
+
+### Walkthrough: Context Management & Memory Refactoring
+
+We have successfully refactored and hardened our context management and unified our memory storage to prevent agent amnesia and solve fragmentation issues.
+
+#### Changes Completed
+
+##### 1. Dual-Write Memory Archiver
+- **[MODIFY] [.agents/hooks/archive_lessons.py](file:///home/dnguyen029/antigravity-project/.agents/hooks/archive_lessons.py)**:
+  - Integrated the Supermemory REST API alongside the existing Supabase REST call.
+  - Implemented automatic retry queuing via `pending_lessons.json` under lock protection (`pending_lessons.json.lock`) in case either Supabase or Supermemory dispatches fail.
+
+##### 2. Active Memory Search Tool
+- **[MODIFY] [context_mcp_server.py](file:///home/dnguyen029/antigravity-project/app_build/tools/context_mcp_server.py)**:
+  - Exposed an active MCP tool `@mcp.tool() search_memory()` alongside the passive `@mcp.prompt() lessons()`.
+  - This enables agents to dynamically query the hybrid Supabase vector store and Supermemory profile mid-execution rather than relying solely on static initial context.
+
+---
+
+#### Verification Results
+
+##### 1. Hook Verification
+We ran the hook manually:
+```bash
+/home/dnguyen029/antigravity-project/.venv/bin/python3 .agents/hooks/archive_lessons.py
+```text
+- **Result**: Successfully generated embeddings and synced to both Supabase (ID: 1347) and Supermemory.
+
+##### 2. Active Tool Verification
+We tested the new `search_memory` tool using a mock diagnostic script:
+```bash
+/home/dnguyen029/venv/bin/python scratch/test_mcp.py
+```text
+- **Result**: Executed successfully, returning active, matching context from both Supermemory and Supabase.
+
+---
 
 ### Walkthrough: Schema Alignment & WISMO Mock Data Removal
 
@@ -128,167 +209,9 @@ We executed the pre-flight connection verification script to confirm all servers
 We created a diagnostic script ([`scratch/test_exa.py`](file:///home/dnguyen029/antigravity-project/scratch/test_exa.py)) to emulate a full `tools/call` JSON-RPC handshake.
 - **Result**: **SUCCESS** (Exa returns live search results cleanly under the updated configuration).
 
-## 📌 Walkthrough: Dashboard Migration & Redesign (Date: N/A | Match Score: 0.612)
+## 📌 Walkthrough: Schema Alignment & WISMO Mock Data Removal (Date: N/A | Match Score: 0.609)
 
-### Walkthrough: Dashboard Migration & Redesign
-
-We have successfully migrated the RingCentral Telemetry and Ariel Bath Competitor pricing dashboards into a standalone project (`telemetry-dashboard`) and completely redesigned the interface using **Shadcn UI** and **UI/UX Pro Max** layout specifications.
-
----
-
-#### 🛠️ Work Accomplished
-
-##### 1. Project Scaffolding
-- Scaffolded a clean Next.js 15 App Router codebase under the [telemetry-dashboard/](file:///home/dnguyen029/swarm-agency/telemetry-dashboard/) directory.
-- Configured environmental credentials and installed central packages: `@supabase/supabase-js`, `lucide-react`, and `@google/genai`.
-
-##### 2. Shadcn UI Integration
-- Initialized Shadcn configurations and installed structural components: `card`, `table`, `tabs`, `badge`, `button`, `tooltip`, and `progress`.
-- Configured **Fira Sans** (font-sans) and **Fira Code** (font-mono) typography mappings inside the Tailwind configuration.
-
-##### 3. Competitor Data Decoupling
-- Extracted the core price list dataset out of the visual UI code and placed it under a dedicated data module at [competitorData.ts](file:///home/dnguyen029/swarm-agency/telemetry-dashboard/lib/competitorData.ts).
-
-##### 4. High-Density Layout Implementation
-- Implemented the unified entrypoint workspace at [page.tsx](file:///home/dnguyen029/swarm-agency/telemetry-dashboard/app/page.tsx). It uses a clean tab controller to switch between:
-  1. **Call Operations Telemetry** (live volume, queue lines, average wait times, active extensions, missed call hotspot heatmaps).
-  2. **Competitor Pricing Analytics** (pricing matrices, regional stock outages, simulated landed costs slider, and the Gemini Pricing Copilot chat client).
-- Fully updated the UI components to use high-density dark mode widgets, borders, and smooth transition states.
-
-##### 5. Transition Safety
-- Excluded the `telemetry-dashboard` folder from the storefront compiler configuration in [tsconfig.json](file:///home/dnguyen029/swarm-agency/tsconfig.json#L27) to isolate environments.
-- Kept all legacy admin/competitor routes and components intact inside the storefront repository to serve as a live backup during the migration transition phase.
-
----
-
-#### 🧪 Verification Results
-
-##### Production Compilation Builds
-1. Standalone Project: Ran `npm run build` inside `telemetry-dashboard/` ➔ **SUCCESS** (Compiled 100% cleanly with no errors).
-2. Storefront Project: Ran `npx tsc --noEmit` in root ➔ **SUCCESS** (Compiled 100% cleanly with no errors).
-
-## 📌 Swarm Rules and Workflow Upgrade Walkthrough (Date: N/A | Match Score: 0.602)
-
-### Swarm Rules and Workflow Upgrade Walkthrough
-
-We have successfully updated the swarm rules and workflows to enforce Ripple Analysis, Configuration Provenance, and Loop Thrashing Prevention.
-
-#### Changes Completed
-
-##### Swarm Rules
-
-###### [MODIFY] [AGENTS.md](file:///home/dnguyen029/antigravity-project/.agents/rules/AGENTS.md)
-- Updated Rule 6 (Plan Approval Gate) to include `Ripple Analysis` and `Configuration Provenance` as mandatory sections of the `implementation_plan.md`.
-
-###### [MODIFY] [guardrails.md](file:///home/dnguyen029/antigravity-project/.agents/rules/guardrails.md)
-- Updated Rule 6 (Mandatory Database Search & Plan Approval Gate) to explicitly verify that the plan contains the new sections.
-
-###### [MODIFY] [orchestrator.md](file:///home/dnguyen029/antigravity-project/.agents/rules/orchestrator.md)
-- Added explicit instructions for:
-  - **Ripple Analysis**: Cross-referencing files against [RIPPLE_MAP.md](file:///home/dnguyen029/antigravity-project/.agents/docs/RIPPLE_MAP.md) during plan generation.
-  - **Configuration Provenance**: Performing a git log/blame and Supabase memory check before editing any configuration parameters.
-  - **Loop Prevention**: Auditing `.agents/session_history.json` to avoid repeating failed attempts.
-
-##### Workflows
-
-###### [MODIFY] [orchestrate.md](file:///home/dnguyen029/antigravity-project/.agents/workflows/orchestrate.md)
-- Updated the Step 2 Self-Correction check list to ensure `implementation_plan.md` contains sections for both "Ripple Analysis" and "Configuration Provenance".
-
----
-
-#### Verification Results
-
-##### Automated Frontmatter Validation
-We ran a python script to parse and validate the YAML frontmatter headers of the modified files:
-```bash
-/home/dnguyen029/antigravity-project/.venv/bin/python3 -c "import sys, yaml; [yaml.safe_load(open(f).read().split('---')[1]) for f in ['/home/dnguyen029/antigravity-project/.agents/rules/AGENTS.md', '/home/dnguyen029/antigravity-project/.agents/rules/guardrails.md', '/home/dnguyen029/antigravity-project/.agents/workflows/orchestrate.md', '/home/dnguyen029/antigravity-project/.agents/rules/orchestrator.md']]; print('ALL METADATA PARSING PASSED')"
-```text
-- **Output**: `ALL METADATA PARSING PASSED`
-- **Status**: **SUCCESS**
-
-## 📌 Walkthrough - shadcn MCP Path Configuration Resolved (Date: N/A | Match Score: 0.592)
-
-### Walkthrough - shadcn MCP Path Configuration Resolved
-
-We have successfully updated the `shadcn` MCP server config block in both local and global `mcp_config.json` files using a safe Python migration script.
-
----
-
-#### Changes Completed
-
-##### 1. Migrations Execution
-- **[NEW] [update_mcp_config.py](file:///home/dnguyen029/.gemini/antigravity-ide/brain/a51b6821-0a2c-4622-9620-d31358727f08/scratch/update_mcp_config.py)**:
-  - Safe Python script to load and parse `mcp_config.json` files.
-  - Replaces the command execution block for `shadcn` to dynamically resolve `node` and `npx` from the user's pnpm bin directory via `bash -c`.
-
-##### 2. Config File Patches
-- **[MODIFY] [mcp_config.json (Local)](file:///home/dnguyen029/antigravity-project/mcp_config.json#L88-L95)**:
-  - Updated configuration to execute the wrapped bash command.
-- **[MODIFY] [mcp_config.json (Global)](file:///home/dnguyen029/.gemini/antigravity-ide/mcp_config.json#L96-L103)**:
-  - Aligned the global configuration block to match.
-
----
-
-#### Verification Results
-
-##### 1. Script Execution Output
-```text
-Successfully updated config at /home/dnguyen029/antigravity-project/mcp_config.json
-Successfully updated config at /home/dnguyen029/.gemini/antigravity-ide/mcp_config.json
-```text
-
-##### 2. Configuration Inspection
-We verified both config files visually. The `shadcn` block is now configured as:
-```json
-"shadcn": {
-  "command": "bash",
-  "args": [
-    "-c",
-    "export PATH=\"/home/dnguyen029/.local/share/pnpm:$PATH\" && npx -y shadcn@latest mcp"
-  ]
-}
-```text
-This forces the editor's child processes to inherit the user's pnpm binaries upon startup, resolving path resolution issues.
-
-## 📌 Walkthrough: Context Management & Memory Refactoring (Date: N/A | Match Score: 0.591)
-
-### Walkthrough: Context Management & Memory Refactoring
-
-We have successfully refactored and hardened our context management and unified our memory storage to prevent agent amnesia and solve fragmentation issues.
-
-#### Changes Completed
-
-##### 1. Dual-Write Memory Archiver
-- **[MODIFY] [.agents/hooks/archive_lessons.py](file:///home/dnguyen029/antigravity-project/.agents/hooks/archive_lessons.py)**:
-  - Integrated the Supermemory REST API alongside the existing Supabase REST call.
-  - Implemented automatic retry queuing via `pending_lessons.json` under lock protection (`pending_lessons.json.lock`) in case either Supabase or Supermemory dispatches fail.
-
-##### 2. Active Memory Search Tool
-- **[MODIFY] [context_mcp_server.py](file:///home/dnguyen029/antigravity-project/app_build/tools/context_mcp_server.py)**:
-  - Exposed an active MCP tool `@mcp.tool() search_memory()` alongside the passive `@mcp.prompt() lessons()`.
-  - This enables agents to dynamically query the hybrid Supabase vector store and Supermemory profile mid-execution rather than relying solely on static initial context.
-
----
-
-#### Verification Results
-
-##### 1. Hook Verification
-We ran the hook manually:
-```bash
-/home/dnguyen029/antigravity-project/.venv/bin/python3 .agents/hooks/archive_lessons.py
-```text
-- **Result**: Successfully generated embeddings and synced to both Supabase (ID: 1347) and Supermemory.
-
-##### 2. Active Tool Verification
-We tested the new `search_memory` tool using a mock diagnostic script:
-```bash
-/home/dnguyen029/venv/bin/python scratch/test_mcp.py
-```text
-- **Result**: Executed successfully, returning active, matching context from both Supermemory and Supabase.
-
----
-
-#### Walkthrough: Schema Alignment & WISMO Mock Data Removal
+### Walkthrough: Schema Alignment & WISMO Mock Data Removal
 
 We have successfully realigned the lead logging parameter schema from `phone` to `phone_number` across all receptionist app layers, updated the unit tests, and removed the fallback mock shipping response from WISMO lookup routines.
 
@@ -412,4 +335,42 @@ We executed the pre-flight connection verification script to confirm all servers
 ##### 3. Manual Tool Execution Verification
 We created a diagnostic script ([`scratch/test_exa.py`](file:///home/dnguyen029/antigravity-project/scratch/test_exa.py)) to emulate a full `tools/call` JSON-RPC handshake.
 - **Result**: **SUCCESS** (Exa returns live search results cleanly under the updated configuration).
+
+## 📌 Automate Lessons Learned & Swarm Mandates: Walkthrough (Date: N/A | Match Score: 0.607)
+
+### Automate Lessons Learned & Swarm Mandates: Walkthrough
+
+We have successfully implemented and verified the lessons learned automation hook, as well as the rules enforcing strict multi-agent swarm execution.
+
+#### Changes Completed
+
+##### 1. Automation Hook Implementation
+- **Created [archive_lessons.py](file:///home/dnguyen029/antigravity-project/.agents/hooks/archive_lessons.py)**: Built a script that compares the SHA-256 hash of the walkthrough against a cache, and automatically POSTs updated walkthrough content to the Supabase `lessons_learned` table.
+- **Registered Hook in [hooks.json](file:///home/dnguyen029/antigravity-project/.agents/hooks.json)**: Added the script execution to the `PostInvocation` array under `sync-context` so it runs automatically at the end of every IDE agent invocation.
+
+##### 2. Strict Swarm Orchestration Rules
+- **Modified [AGENTS.md](file:///home/dnguyen029/antigravity-project/.agents/rules/AGENTS.md)**: Added `Rule 13 — Swarm Orchestration Mandate` to prevent the agent from bypassing the Orchestrator/Builder/Auditor/SRE sequence when `/orchestrate` is requested.
+- **Modified [GEMINI.md](file:///home/dnguyen029/antigravity-project/.agents/rules/GEMINI.md)**: Synced the mandate into the strict guidelines block of the Gemini agent specifications.
+
+##### 3. Standards Compliance Audit
+- Scanned all 43 active skill folders and rule files in [.agents/skills/](file:///home/dnguyen029/antigravity-project/.agents/skills/) and [.agents/rules/](file:///home/dnguyen029/antigravity-project/.agents/rules/).
+- Verified that **100% of rules and skills** have compliant YAML frontmatter headers.
+
+---
+
+#### Verification Results
+
+##### Lessons Learned Hook Verification
+We manually triggered the new hook script:
+```bash
+/home/dnguyen029/antigravity-project/.venv/bin/python3 /home/dnguyen029/antigravity-project/.agents/hooks/archive_lessons.py
+```text
+- **First Run**: Detected modified walkthrough and successfully uploaded it:
+  `Successfully archived walkthrough lesson to Supabase (ID: 1267)`
+- **Subsequent Runs**: Checked cache and skipped database insert, confirming correct behavior.
+
+##### 4. Lifecycle Hooks Hardening
+- **Harkened safety-gate path**: Updated [hooks.json](file:///home/dnguyen029/antigravity-project/.agents/hooks.json) to change the `PreToolUse` command from using `/usr/bin/env python3` and a relative path to the absolute python path (`/home/dnguyen029/antigravity-project/.venv/bin/python3`) and the absolute script path (`/home/dnguyen029/antigravity-project/.agents/hooks/safety_gate.py`). This prevents directory resolution failures when the working directory changes.
+
+All systems are validated, hardened, and fully operational.
 
