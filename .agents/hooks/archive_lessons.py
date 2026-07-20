@@ -48,14 +48,16 @@ def main():
             return
 
         # Trigger codebase indexing automatically
-        try:
-            log("Triggering codebase reindexing...")
-            if project_root not in sys.path:
-                sys.path.append(project_root)
-            from app_build.tools.index_codebase import run_indexing
-            run_indexing()
-        except Exception as idx_err:
-            log(f"Warning: Failed to run codebase indexer: {idx_err}")
+        if os.path.exists(os.path.join(project_root, "app_build/tools/index_codebase.py")):
+            try:
+                log("Triggering codebase reindexing...")
+                if project_root not in sys.path:
+                    sys.path.append(project_root)
+                import importlib
+                index_codebase = importlib.import_module("app_build.tools.index_codebase")
+                index_codebase.run_indexing()
+            except Exception as idx_err:
+                log(f"Warning: Failed to run codebase indexer: {idx_err}")
 
         walkthrough_path = os.path.join(project_root, "production_artifacts/walkthrough.md")
         hash_cache_path = os.path.join(project_root, ".agents/hooks/.walkthrough_hash")

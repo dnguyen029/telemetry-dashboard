@@ -4,7 +4,7 @@ This repository serves as the **Antigravity 2.0 IDE Swarm Workspace**. It is the
 
 ### 🗄️ Workspace Architecture
 Our systems are organized as follows:
-1. **This Workspace Repository (`antigravity-project`):** Main repository hosting developer agent configurations, IDE rules, MCP setups, and connection verifiers.
+1. **This Workspace Repository (`telemetry-dashboard`):** Main repository hosting developer agent configurations, IDE rules, MCP setups, and connection verifiers.
 2. **AI Receptionist Production Codebase:** Hosted right inside this repository under the [app_build/receptionist/](file:///home/dnguyen029/telemetry-dashboard/app_build/receptionist/) directory. This contains the FastAPI webhook backend deployed to **Google Cloud Run** in project `arielcsx` as service `receptionist-prod` (`us-central1`), with base URL `https://receptionist-prod-106093400023.us-central1.run.app`.
 3. **Python SDK Swarm Repository ([`antigravity-sdk`](https://github.com/dnguyen029/antigravity-sdk.git)):** Hosts the underlying Google Antigravity SDK (`google.adk`) code and Python backend CLI.
 
