@@ -17,12 +17,7 @@ export interface CompetitorProduct {
   rating: number;
   reviewCount: number;
   mapPrice: number;
-  prices: {
-    homedepot: ProductPrice;
-    lowes: ProductPrice;
-    wayfair: ProductPrice;
-    amazon: ProductPrice;
-  };
+  prices: Record<string, ProductPrice>;
 }
 
 export const CORE_PRODUCTS: CompetitorProduct[] = [

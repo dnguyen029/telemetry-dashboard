@@ -1,5 +1,10 @@
 // Shared RingCentral utilities for API and cron routes
 
+export interface RingCentralPresenceRecord {
+  presenceStatus?: string;
+  telephonyStatus?: string;
+}
+
 export interface CallBounds {
   dateFrom: string;
   dateTo: string;
@@ -218,7 +223,7 @@ export async function getAgentPresenceCounts(
   }
 
   const data = await res.json();
-  const records = data.records || [];
+  const records = (data.records || []) as RingCentralPresenceRecord[];
 
   let online = 0;
   let onCall = 0;
@@ -226,7 +231,7 @@ export async function getAgentPresenceCounts(
   let dnd = 0;
   let offline = 0;
 
-  records.forEach((r: any) => {
+  records.forEach((r) => {
     const pStatus = r.presenceStatus;
     const tStatus = r.telephonyStatus;
 
@@ -265,9 +270,9 @@ export async function getActiveQueueCount(
   }
 
   const data = await res.json();
-  const records = data.records || [];
+  const records = (data.records || []) as { telephonyStatus?: string }[];
 
-  return records.filter((c: any) => c.telephonyStatus === "Ringing").length;
+  return records.filter((c) => c.telephonyStatus === "Ringing").length;
 }
 
 export async function fetchExtensions(

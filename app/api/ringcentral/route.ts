@@ -38,6 +38,23 @@ interface PeriodComparisonRow {
   rows_available: number;
 }
 
+export interface DailyTrend {
+  day: string;
+  inbound: number;
+  answered: number;
+  missed: number;
+}
+
+export interface SparklineData {
+  inbound: number[];
+  answered: number[];
+  missed: number[];
+  abandoned: number[];
+  answerRate: number[];
+  missedRate: number[];
+  abandonRate: number[];
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const dateParam = searchParams.get("date") || undefined;
@@ -143,8 +160,8 @@ export async function GET(request: Request) {
 
     // Fetch real historical trends for the dashboard from Supabase
     let dbHotspot: number[][] | undefined = undefined;
-    let dbDailyTrends: any[] | undefined = undefined;
-    let dbSparklines: any | undefined = undefined;
+    let dbDailyTrends: DailyTrend[] | undefined = undefined;
+    let dbSparklines: SparklineData | undefined = undefined;
 
     try {
       const { data: hourlyData } = await supabase
@@ -533,8 +550,8 @@ function buildAnalyticsPayload(
   agentOccupancy?: number,
   missedCallsList: { id: string; startTime: string; fromName: string; fromNumber: string; toName: string; toNumber: string; duration: number; result: string }[] = [],
   dbHotspot?: number[][],
-  dbDailyTrends?: any[],
-  dbSparklines?: any
+  dbDailyTrends?: DailyTrend[],
+  dbSparklines?: SparklineData
 ) {
   const formatHourLabel = (h: number) => {
     if (h === 0) return "12 AM";

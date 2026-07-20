@@ -9,20 +9,13 @@ import {
   BarChart2, 
   Shield, 
   TrendingUp, 
-  TrendingDown, 
   ShoppingBag, 
   AlertTriangle, 
-  CheckCircle2, 
-  Search, 
-  ExternalLink, 
-  ChevronRight, 
   X, 
   Send,
   Database,
-  Grid,
   Percent,
   Sliders,
-  DollarSign,
   Menu,
   Moon,
   Sun,
@@ -33,12 +26,9 @@ import {
   FileText
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // RingCentral Subcomponents
 import PerformanceTable from "@/components/ringcentral/PerformanceTable";
@@ -48,8 +38,87 @@ import BusinessHoursChart from "@/components/ringcentral/BusinessHoursChart";
 import DailyTrendChart from "@/components/ringcentral/DailyTrendChart";
 
 // Competitor Data
-import { CORE_PRODUCTS, CompetitorProduct, ProductPrice } from "@/lib/competitorData";
+import { CORE_PRODUCTS, CompetitorProduct } from "@/lib/competitorData";
 import { isValidVanityMatch } from "@/lib/priceFilters";
+
+interface DailyTrend {
+  day: string;
+  inbound: number;
+  answered: number;
+  missed: number;
+}
+
+interface SparklineData {
+  inbound: number[];
+  answered: number[];
+  missed: number[];
+  abandoned: number[];
+  answerRate: number[];
+  missedRate: number[];
+  abandonRate: number[];
+  [key: string]: number[];
+}
+
+interface ActiveQueue {
+  name: string;
+  count: number;
+}
+
+interface RingCentralTelemetryData {
+  status: string;
+  integrationSource: string;
+  comparison_status: "live" | "insufficient_data";
+  info?: string;
+  missedCallsList: {
+    id: string;
+    startTime: string;
+    fromName: string;
+    fromNumber: string;
+    toName: string;
+    toNumber: string;
+    duration: number;
+    result: string;
+  }[];
+  metrics: {
+    totalCallsToday: number;
+    answeredCalls: number;
+    missedCalls: number;
+    abandonedCalls: number;
+    avgWaitSeconds: number;
+    activeQueueCount: number;
+    agentsOnline: number;
+    agentOccupancy: number;
+  };
+  activeQueues: ActiveQueue[];
+  comparisonData: Record<
+    string,
+    Record<
+      string,
+      {
+        current: number;
+        previous: number;
+        change: number;
+        pct: number;
+      }
+    >
+  >;
+  hourlyTrends: { hour: string; inbound: number; answered: number; missed: number }[];
+  hotspotData: number[][];
+  businessHoursData: {
+    businessHours: { inbound: number; answered: number; missed: number };
+    afterHours: { inbound: number; answered: number; missed: number };
+  };
+  dailyTrends: DailyTrend[];
+  sparklines: SparklineData;
+  queue8Allocations: {
+    productSpecs: number;
+    damagesDefects: number;
+    wismo: number;
+    unassigned: number;
+  };
+  extensions: { id: string; extensionNumber: string; name: string; type: string; status: string; occupancy: number }[];
+  lastUpdated: string;
+}
 
 const RETAILERS = ['homedepot', 'lowes', 'wayfair', 'amazon', 'walmart', 'ebay', 'target', 'bestbuy'];
 
@@ -81,8 +150,8 @@ function getSLAColor(status: SLAStatus): string {
   }[status];
 }
 
-const normalizeProductPrices = (prod: any) => {
-  const prices = { ...prod.prices } as any;
+const normalizeProductPrices = (prod: CompetitorProduct): CompetitorProduct => {
+  const prices = { ...prod.prices };
   RETAILERS.forEach((key) => {
     if (!prices[key]) {
       prices[key] = {
@@ -151,7 +220,7 @@ export default function DashboardSuite() {
   // ==========================================
   // RINGCENTRAL TELEMETRY STATE & LOGIC
   // ==========================================
-  const [rcData, setRcData] = useState<any>(null);
+  const [rcData, setRcData] = useState<RingCentralTelemetryData | null>(null);
   const [rcLoading, setRcLoading] = useState(false);
   const [rcError, setRcError] = useState<string | null>(null);
   const [period, setPeriod] = useState<"DoD" | "WoW" | "MoM" | "QoQ">("WoW");
@@ -169,9 +238,9 @@ export default function DashboardSuite() {
       if (!res.ok) throw new Error(`Failed to fetch RingCentral: ${res.statusText}`);
       const payload = await res.json();
       setRcData(payload);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setRcError(err.message || "Unknown error occurred.");
+      setRcError(err instanceof Error ? err.message : "Unknown error occurred.");
     } finally {
       setRcLoading(false);
     }
@@ -213,16 +282,12 @@ export default function DashboardSuite() {
     };
   }, [selectedDate, fetchRcMetrics]);
 
-  const getPercent = (val: number) => {
-    if (!rcData?.metrics || rcData.metrics.totalCallsToday === 0) return 0;
-    return Math.round((val / rcData.metrics.totalCallsToday) * 100);
-  };
 
   // ==========================================
   // COMPETITOR DASHBOARD STATE & LOGIC
   // ==========================================
   const [products, setProducts] = useState<CompetitorProduct[]>(() => CORE_PRODUCTS.map(normalizeProductPrices));
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [selectedProduct, setSelectedProduct] = useState<CompetitorProduct | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState<{ current: number; total: number } | null>(null);
 
@@ -239,7 +304,6 @@ export default function DashboardSuite() {
   const [lastSyncedTime, setLastSyncedTime] = useState<string | null>(null);
 
   // AI Copilot Chat states
-  const [isCopilotOpen, setIsCopilotOpen] = useState(false);
   const [newCopilotMessage, setNewCopilotMessage] = useState("");
   const [isCopilotSending, setIsCopilotSending] = useState(false);
   const [copilotMessages, setCopilotMessages] = useState<Array<{ sender: "user" | "assistant"; text: string }>>([
@@ -250,7 +314,7 @@ export default function DashboardSuite() {
   ]);
 
   // Helper to calculate display price based on simulation settings
-  const getDisplayPrice = (product: any, retailerKey: string) => {
+  const getDisplayPrice = (product: CompetitorProduct, retailerKey: string) => {
     const priceInfo = product.prices[retailerKey];
     if (!priceInfo || priceInfo.price === 0) return 0;
     
@@ -260,8 +324,8 @@ export default function DashboardSuite() {
     return priceInfo.price;
   };
 
-  const hasOutage = (prod: any) => {
-    return Object.values(prod.prices).some((retailer: any) => {
+  const hasOutage = (prod: CompetitorProduct) => {
+    return Object.values(prod.prices).some((retailer) => {
       if (!retailer || retailer.price === 0) return false;
       const isOOS = retailer.inStock === false;
       const hasRegOutage = retailer.regionalStock && (
@@ -308,8 +372,9 @@ export default function DashboardSuite() {
       if (!res.ok) throw new Error(data.error || "Failed to get reply");
 
       setCopilotMessages(prev => [...prev, { sender: "assistant", text: data.reply }]);
-    } catch (err: any) {
-      setCopilotMessages(prev => [...prev, { sender: "assistant", text: `Error: ${err.message || "Failed to get reply."}` }]);
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : "Failed to get reply.";
+      setCopilotMessages(prev => [...prev, { sender: "assistant", text: `Error: ${errMsg}` }]);
     } finally {
       setIsCopilotSending(false);
     }
@@ -333,7 +398,7 @@ export default function DashboardSuite() {
     setIsSavingMap(true);
     try {
       const updatedProducts = products.map((p) => {
-        if (p.model === selectedProduct.model) {
+        if (p.model === selectedProduct!.model) {
           return { ...p, mapPrice: newPrice };
         }
         return p;
@@ -348,10 +413,11 @@ export default function DashboardSuite() {
       if (!response.ok) throw new Error("Failed to save updated MAP price to server.");
 
       setProducts(updatedProducts);
-      setSelectedProduct((prev: any) => prev ? { ...prev, mapPrice: newPrice } : null);
+      setSelectedProduct((prev) => prev ? { ...prev, mapPrice: newPrice } : null);
       alert("MAP price successfully updated!");
-    } catch (err: any) {
-      alert(`Error updating MAP: ${err.message || err}`);
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      alert(`Error updating MAP: ${errMsg}`);
     } finally {
       setIsSavingMap(false);
     }
@@ -455,8 +521,9 @@ export default function DashboardSuite() {
 
       setProducts(updatedProducts);
       setLastSyncedTime(new Date().toISOString());
-    } catch (err: any) {
-      alert(`Sync error: ${err.message || err}`);
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      alert(`Sync error: ${errMsg}`);
     } finally {
       setIsSyncing(false);
       setSyncProgress(null);
@@ -472,7 +539,7 @@ export default function DashboardSuite() {
 
   products.forEach(p => {
     Object.keys(p.prices).forEach(key => {
-      const pInfo = (p.prices as any)[key];
+      const pInfo = p.prices[key];
       if (pInfo.price > 0) {
         totalChecks++;
         const displayPrice = getDisplayPrice(p, key);
@@ -742,7 +809,7 @@ export default function DashboardSuite() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
                     <Card className="glass-card shadow-sm border-slate-200 dark:border-slate-900 glow-blue">
                       <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-xs font-mono font-semibold tracking-wider text-slate-550 dark:text-slate-400 uppercase">Today's Call Volume</CardTitle>
+                        <CardTitle className="text-xs font-mono font-semibold tracking-wider text-slate-550 dark:text-slate-400 uppercase">{"Today's Call Volume"}</CardTitle>
                         <Phone className="w-4 h-4 text-blue-500" />
                       </CardHeader>
                       <CardContent className="space-y-1.5">
@@ -766,7 +833,7 @@ export default function DashboardSuite() {
                         <div className={`text-3xl font-bold font-mono ${getSLAColor(getSLAStatus(rcData.metrics.activeQueueCount, SLA_THRESHOLDS.activeQueue))}`}>{rcData.metrics.activeQueueCount}</div>
                         <div className="text-[9px] text-slate-500 dark:text-slate-400 space-y-0.5 border-t border-slate-200 dark:border-slate-855 pt-1.5">
                           {rcData.activeQueues && rcData.activeQueues.length > 0 ? (
-                            rcData.activeQueues.map((q: any, idx: number) => (
+                            rcData.activeQueues.map((q, idx: number) => (
                               <div key={idx} className="flex justify-between gap-2 font-mono">
                                 <span className="truncate max-w-[130px]">{q.name.split(" (")[0]}:</span>
                                 <strong className="text-slate-700 dark:text-slate-205">{q.count}</strong>
@@ -1020,14 +1087,14 @@ export default function DashboardSuite() {
                   
                   {/* Grid Filters */}
                   <div className="flex border-b border-slate-200 dark:border-slate-900 pb-3 space-x-6">
-                    {[
+                    {([
                       { id: "all", label: "ALL PRODUCTS" },
                       { id: "violations", label: "ACTIVE VIOLATIONS" },
                       { id: "outages", label: "STOCK OUTAGES" }
-                    ].map((filter) => (
+                    ] as const).map((filter) => (
                       <button
                         key={filter.id}
-                        onClick={() => setActiveGridFilter(filter.id as any)}
+                        onClick={() => setActiveGridFilter(filter.id)}
                         className={`pb-1.5 text-xs font-mono tracking-wider transition-all duration-300 border-b-2 ${
                           activeGridFilter === filter.id
                             ? "text-amber-505 border-amber-500 font-bold"
@@ -1048,7 +1115,7 @@ export default function DashboardSuite() {
                             <TableHead className="text-slate-500 dark:text-slate-400">Product Model</TableHead>
                             <TableHead className="text-slate-500 dark:text-slate-400 text-right">MAP Floor</TableHead>
                             <TableHead className="text-slate-500 dark:text-slate-400 text-right">Home Depot</TableHead>
-                            <TableHead className="text-slate-500 dark:text-slate-400 text-right">Lowe's</TableHead>
+                            <TableHead className="text-slate-500 dark:text-slate-400 text-right">{"Lowe's"}</TableHead>
                             <TableHead className="text-slate-500 dark:text-slate-400 text-right">Wayfair</TableHead>
                             <TableHead className="text-slate-500 dark:text-slate-400 text-right">Amazon</TableHead>
                             <TableHead className="text-slate-500 dark:text-slate-400 text-center">Actions</TableHead>
@@ -1066,7 +1133,7 @@ export default function DashboardSuite() {
                               {/* Retailers */}
                               {['homedepot', 'lowes', 'wayfair', 'amazon'].map((rKey) => {
                                 const val = getDisplayPrice(prod, rKey);
-                                const pInfo = (prod.prices as any)[rKey];
+                                const pInfo = prod.prices[rKey];
                                 const isViolating = val > 0 && val < prod.mapPrice;
                                 
                                 return (
@@ -1231,8 +1298,8 @@ export default function DashboardSuite() {
                     </TableHeader>
                     <TableBody className="divide-y divide-slate-200 dark:divide-slate-850">
                       {['homedepot', 'lowes', 'wayfair', 'amazon'].map((rKey) => {
-                        const pInfo = (selectedProduct.prices as any)[rKey];
-                        const landed = getDisplayPrice(selectedProduct, rKey);
+                        const pInfo = selectedProduct!.prices[rKey];
+                        const landed = getDisplayPrice(selectedProduct!, rKey);
                         if (pInfo.price === 0) return null;
                         
                         return (
@@ -1308,7 +1375,7 @@ export default function DashboardSuite() {
                       </TableRow>
                     </TableHeader>
                     <TableBody className="divide-y divide-slate-100 dark:divide-slate-850">
-                      {rcData.missedCallsList.map((call: any) => {
+                      {rcData.missedCallsList.map((call) => {
                         const formattedTime = new Date(call.startTime).toLocaleTimeString("en-US", {
                           timeZone: "America/Los_Angeles",
                           hour: "2-digit",
