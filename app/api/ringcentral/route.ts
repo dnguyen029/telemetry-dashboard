@@ -188,7 +188,8 @@ export async function GET(request: Request) {
       if (dailyData && dailyData.length > 0) {
         const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         dbDailyTrends = dailyData.map(row => {
-          const dateObj = new Date(row.date);
+          const [yr, mo, dy] = row.date.split('-').map(Number);
+          const dateObj = new Date(yr, mo - 1, dy);
           return {
             day: days[dateObj.getDay()],
             inbound: row.inbound_calls || 0,
