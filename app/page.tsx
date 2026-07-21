@@ -83,6 +83,8 @@ interface RingCentralTelemetryData {
     missedCalls: number;
     abandonedCalls: number;
     avgWaitSeconds: number;
+    avgHandleTimeSeconds?: number;
+    serviceLevelSLA?: number;
     activeQueueCount: number;
     agentsOnline: number;
     agentsOnCall?: number;

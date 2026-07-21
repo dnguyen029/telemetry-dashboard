@@ -118,7 +118,6 @@ export async function GET(request: Request) {
       getAgentPresenceCounts(server, accessToken)
     ]);
 
-    const enabledUserCount = recordsList.filter((r: RingCentralExtension) => r.type === "User" || r.type === "Department").length;
     const userPhoneNumbers = await fetchUserPhoneNumbers(server, accessToken, recordsList);
 
     // Fetch Call Logs
@@ -297,7 +296,7 @@ export async function GET(request: Request) {
     const prevDateStr = prevDate.toISOString().split("T")[0];
 
     // Fetch previous day's record for DoD, and WoW/MoM/QoQ via RPC
-    let [prevDayRes, wowRes, momRes, qoqRes] = await Promise.all([
+    const [prevDayRes, wowRes, momRes, qoqRes] = await Promise.all([
       supabase
         .from("daily_call_telemetry")
         .select("inbound_calls, answered_calls, missed_calls, abandoned_calls, avg_wait_seconds")
@@ -448,6 +447,8 @@ export async function GET(request: Request) {
       metrics.missedCalls,
       metrics.abandonedCalls,
       metrics.avgWaitSeconds,
+      metrics.avgHandleTimeSeconds,
+      metrics.serviceLevelSLA,
       activeQueueCount,
       presenceCounts.online,
       presenceCounts.onCall,
@@ -556,6 +557,8 @@ function buildAnalyticsPayload(
   missedCalls: number,
   abandonedCalls: number,
   avgWaitSeconds: number,
+  avgHandleTimeSeconds: number,
+  serviceLevelSLA: number,
   activeQueueCount: number,
   agentsOnline: number,
   agentsOnCall: number,
@@ -673,6 +676,8 @@ function buildAnalyticsPayload(
       missedCalls,
       abandonedCalls,
       avgWaitSeconds,
+      avgHandleTimeSeconds,
+      serviceLevelSLA,
       activeQueueCount,
       agentsOnline,
       agentsOnCall,

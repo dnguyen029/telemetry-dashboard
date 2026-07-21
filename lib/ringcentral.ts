@@ -101,6 +101,8 @@ export interface AggregatedMetrics {
   missedCalls: number;
   abandonedCalls: number;
   avgWaitSeconds: number;
+  avgHandleTimeSeconds: number;
+  serviceLevelSLA: number;
   hourlyVolume: number[];
   hourlyAnswered: number[];
   hourlyMissed: number[];
@@ -220,6 +222,15 @@ export function aggregateCallLogs(
     }
   });
 
+  // Calculate Average Handle Time (AHT = Total talk duration / Answered calls)
+  const answeredLogsList = queueLogs.filter((l: RingCentralCallLog) => isAcceptedCall(l) && (l.duration || 0) >= 45);
+  const totalTalkSeconds = answeredLogsList.reduce((acc, log) => acc + (log.duration || 0), 0);
+  const avgHandleTimeSeconds = answeredCalls > 0 ? Math.round(totalTalkSeconds / answeredCalls) : 0;
+
+  // Calculate Service Level SLA % (Percentage of answered calls with wait duration <= 20s)
+  const answeredWithin20s = answeredLogsList.filter((l: RingCentralCallLog) => (l.duration || 0) <= 20).length;
+  const serviceLevelSLA = totalCalls > 0 ? Math.round((answeredWithin20s / totalCalls) * 100) : 100;
+
   return {
     queueLogs,
     totalCalls,
@@ -227,6 +238,8 @@ export function aggregateCallLogs(
     missedCalls,
     abandonedCalls,
     avgWaitSeconds,
+    avgHandleTimeSeconds,
+    serviceLevelSLA,
     hourlyVolume,
     hourlyAnswered,
     hourlyMissed
