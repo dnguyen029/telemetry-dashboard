@@ -22,6 +22,8 @@ export interface RingCentralExtension {
 
 export interface RingCentralCallLog {
   id?: string;
+  sessionId?: string;
+  telephonySessionId?: string;
   direction: string;
   result: string;
   action?: string;
@@ -137,23 +139,44 @@ export function aggregateCallLogs(
   const isAcceptedCall = (log: RingCentralCallLog) => log.result === "Accepted" || log.result === "Call connected";
   const isMissedStatusCall = (log: RingCentralCallLog) => missedResultStatuses.includes(log.result) || log.action === "Missed";
 
-  // 1. Answered: Accepted connection with duration >= 45s (agent conversation)
-  answeredCalls = queueLogs.filter((l: RingCentralCallLog) => {
-    return isAcceptedCall(l) && (l.duration || 0) >= 45;
-  }).length;
+  // Group queue logs by Session ID (or caller phone + 3-min window fallback)
+  const sessionMap = new Map<string, RingCentralCallLog[]>();
+  queueLogs.forEach((log) => {
+    const fromPhone = log.from?.phoneNumber || log.from?.extensionNumber || "unknown";
+    const timeKey = log.startTime ? log.startTime.substring(0, 16) : "notime";
+    const sessionKey = log.sessionId || log.telephonySessionId || `${fromPhone}_${timeKey}`;
 
-  // 2. Abandoned: Explicit hang-up, OR any call (accepted/missed) under 9s (IVR drops)
-  abandonedCalls = queueLogs.filter((l: RingCentralCallLog) => {
-    const isExplicitAbandon = abandonedResultStatuses.includes(l.result);
-    const isShortAccepted = isAcceptedCall(l) && (l.duration || 0) <= 8;
-    const isShortMissed = isMissedStatusCall(l) && (l.duration || 0) <= 8;
-    return isExplicitAbandon || isShortAccepted || isShortMissed;
-  }).length;
+    if (!sessionMap.has(sessionKey)) {
+      sessionMap.set(sessionKey, []);
+    }
+    sessionMap.get(sessionKey)!.push(log);
+  });
 
-  // 3. Missed: Unanswered status with duration >= 9s (rings through to VM or timeout)
-  missedCalls = queueLogs.filter((l: RingCentralCallLog) => {
-    return isMissedStatusCall(l) && (l.duration || 0) >= 9;
-  }).length;
+  // 1. Answered: Any session where at least 1 leg was an accepted conversation (duration >= 45s)
+  answeredCalls = 0;
+  let uniqueMissedCalls = 0;
+  let uniqueAbandonedCalls = 0;
+
+  sessionMap.forEach((sessionLogs) => {
+    const hasAnsweredLeg = sessionLogs.some(l => isAcceptedCall(l) && (l.duration || 0) >= 45);
+    if (hasAnsweredLeg) {
+      answeredCalls++;
+      return;
+    }
+
+    const hasMissedLeg = sessionLogs.some(l => isMissedStatusCall(l) && (l.duration || 0) >= 9);
+    const hasExplicitAbandon = sessionLogs.some(l => abandonedResultStatuses.includes(l.result));
+    const hasShortLeg = sessionLogs.some(l => (l.duration || 0) <= 8);
+
+    if (hasMissedLeg) {
+      uniqueMissedCalls++;
+    } else if (hasExplicitAbandon || hasShortLeg) {
+      uniqueAbandonedCalls++;
+    }
+  });
+
+  missedCalls = uniqueMissedCalls;
+  abandonedCalls = uniqueAbandonedCalls;
 
   // Proxy wait time from Simple Call Log data (no dedicated wait-time field available).
   // The RingCentral Simple API only returns total call duration (ring + talk time combined),

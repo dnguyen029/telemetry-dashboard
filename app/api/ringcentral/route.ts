@@ -268,20 +268,29 @@ export async function GET(request: Request) {
     const capacitySeconds = activeStaffCount * shiftSeconds;
     const occupancyRate = Math.min(98, Math.round((totalTalkTime / capacitySeconds) * 100));
 
-    const missedCallsList = metrics.queueLogs
+    // Deduplicate Missed Calls List to represent unique customer calls
+    const uniqueMissedMap = new Map<string, RingCentralCallLog>();
+    metrics.queueLogs
       .filter((l: RingCentralCallLog) => (l.duration || 0) >= 9 && (missedResultStatuses.includes(l.result) || l.action === "Missed"))
-      .map((l: RingCentralCallLog) => ({
-        id: l.id || `missed-${Math.random().toString(36).substr(2, 9)}`,
-        startTime: l.startTime || "",
-        ...(() => {
-          const { maskedName, maskedPhone } = maskPII(l.from?.name, l.from?.phoneNumber);
-          return { fromName: maskedName, fromNumber: maskedPhone };
-        })(),
-        toName: l.to?.name || "Support",
-        toNumber: l.to?.extensionNumber || "Support",
-        duration: l.duration || 0,
-        result: l.result || "Missed"
-      }));
+      .forEach((l: RingCentralCallLog) => {
+        const callerKey = l.from?.phoneNumber || l.from?.extensionNumber || l.id || Math.random().toString();
+        if (!uniqueMissedMap.has(callerKey)) {
+          uniqueMissedMap.set(callerKey, l);
+        }
+      });
+
+    const missedCallsList = Array.from(uniqueMissedMap.values()).map((l: RingCentralCallLog) => ({
+      id: l.id || `missed-${Math.random().toString(36).substr(2, 9)}`,
+      startTime: l.startTime || "",
+      ...(() => {
+        const { maskedName, maskedPhone } = maskPII(l.from?.name, l.from?.phoneNumber);
+        return { fromName: maskedName, fromNumber: maskedPhone };
+      })(),
+      toName: l.to?.name || "Support",
+      toNumber: l.to?.extensionNumber || "Support",
+      duration: l.duration || 0,
+      result: l.result || "Missed"
+    }));
 
     const [y, m, d] = formattedDate.split("-").map(Number);
     const prevDate = new Date(Date.UTC(y, m - 1, d - 1));
