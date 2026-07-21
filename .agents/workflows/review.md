@@ -18,3 +18,4 @@ When the user types `/review`, coordinate the agents as follows:
    - **Plain English Solutions**: Practical strategies to fix the problems without technical jargon.
    - **Improved Code Examples**: Before-and-after code comparisons showing the improvements.
 5. Stop and present the review report. Do NOT modify any code files directly, and do NOT draft an implementation plan for execution.
+6. Ensure the final output does NOT terminate on a code block; conclude with a plain-text summary or clear next steps.

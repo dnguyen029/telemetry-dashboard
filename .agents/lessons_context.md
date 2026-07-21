@@ -1,88 +1,46 @@
 # 🧠 Active lessons learned context (Ground Truth)
 <!-- Method: semantic -->
 
-## 📌 Walkthrough: Tech Lead Mode and `/consult` Workflow (Date: N/A | Match Score: 0.642)
+## 📌 Test Lesson from IDE Agent (Date: N/A | Match Score: 0.572)
 
-### Walkthrough: Tech Lead Mode and `/consult` Workflow
+This is a test lesson verifying the new manual archive script and automated vector embedding calculation.
 
-We have successfully updated the workspace rules and workflows to support the proactive **Senior Tech Lead** advisory mode and the `/consult` slash command.
+## 📌 RingCentral SMS Verification (Date: N/A | Match Score: 0.566)
 
-#### Changes Completed
+Verified that the RingCentral API client has SMS scopes enabled. Found that phone number +14246008056 is the active SMS-capable sender for extension 567134052. Successfully dispatched a test message to +17149870066 using /restapi/v1.0/account/~/extension/~/sms.
 
-##### 1. Updated Orchestrator Rules
-- **File**: [orchestrator.md](file:///home/dnguyen029/antigravity-project/.agents/rules/orchestrator.md)
-- **Description**: Added the **AI Technical Lead Mode** section under Operational Guidelines. This explicitly directs the orchestrator to:
-  - Ask clarifying questions.
-  - Challenge design decisions (Zero Sycophancy).
-  - Identify scaling, performance, security, and complexity risks.
-  - Suggest cleaner, simpler alternatives.
-  - Think long-term with a 5+ year maintainability perspective.
-  - Provide structured deliverables (architectural recommendations, tradeoffs, implementation paths).
+## 📌 Walkthrough - Antigravity IDE Diagnostics Audit (Date: N/A | Match Score: 0.565)
 
-##### 2. Created `/consult` Slash Command Workflow
-- **File**: [consult.md](file:///home/dnguyen029/antigravity-project/.agents/workflows/consult.md)
-- **Description**: Scaffolded a template mapping the `/consult <topic_or_code>` command directly to the Orchestrator, guiding it to critique design/features without writing code or generating execution plans.
+### Walkthrough - Antigravity IDE Diagnostics Audit
+
+An audit has been performed on the language server and renderer diagnostics report to identify, evaluate, and classify all reported warning and error signatures.
 
 ---
 
-#### Verification Results
+#### 🔍 Audit Verification Summary
 
-##### YAML Frontmatter Validation
-We ran a metadata validation script on both the updated and newly created files to check for correct YAML parsing and required keys:
-- [orchestrator.md](file:///home/dnguyen029/antigravity-project/.agents/rules/orchestrator.md): **Passed**
-- [consult.md](file:///home/dnguyen029/antigravity-project/.agents/workflows/consult.md): **Passed**
+All reported warnings and errors within [Antigravity IDE-diagnostics.txt](file:///home/dnguyen029/antigravity-project/Antigravity%20IDE-diagnostics.txt) were evaluated. They are confirmed to be non-fatal, harmless false-positives fully mitigated by existing environment mechanisms.
 
-```text
-Checking: /home/dnguyen029/antigravity-project/.agents/rules/orchestrator.md
-  [OK] Parsed key-value pairs: {'trigger': 'model_decision', 'description': 'Orchestrator/Architect agent rules for high-level planning, task delegation, and technical strategy.', 'model': 'Gemini 3.1 Pro (High)'}
-Checking: /home/dnguyen029/antigravity-project/.agents/workflows/consult.md
-  [OK] Parsed key-value pairs: {'description': 'Get a tech lead consult, architectural critique, and risk analysis on an idea or design draft.'}
-SUCCESS: All frontmatters are valid.
-```text
-
-The system is now fully aligned with the senior advisor behaviors.
-
-## 📌 Rule File Streamlining & Token Optimization (Date: N/A | Match Score: 0.620)
-
-Consolidated all Swarm Rules & Mandates into AGENTS.md (Rules 1-10) and refactored GEMINI.md to focus solely on model environment configuration and communication guidelines. Linked files directly and updated orchestrator target references to native_orchestrator.py, saving ~500 system prompt tokens.
-
-## 📌 Walkthrough: Context Management & Memory Refactoring (Date: N/A | Match Score: 0.613)
-
-### Walkthrough: Context Management & Memory Refactoring
-
-We have successfully refactored and hardened our context management and unified our memory storage to prevent agent amnesia and solve fragmentation issues.
-
-#### Changes Completed
-
-##### 1. Dual-Write Memory Archiver
-- **[MODIFY] [.agents/hooks/archive_lessons.py](file:///home/dnguyen029/antigravity-project/.agents/hooks/archive_lessons.py)**:
-  - Integrated the Supermemory REST API alongside the existing Supabase REST call.
-  - Implemented automatic retry queuing via `pending_lessons.json` under lock protection (`pending_lessons.json.lock`) in case either Supabase or Supermemory dispatches fail.
-
-##### 2. Active Memory Search Tool
-- **[MODIFY] [context_mcp_server.py](file:///home/dnguyen029/antigravity-project/app_build/tools/context_mcp_server.py)**:
-  - Exposed an active MCP tool `@mcp.tool() search_memory()` alongside the passive `@mcp.prompt() lessons()`.
-  - This enables agents to dynamically query the hybrid Supabase vector store and Supermemory profile mid-execution rather than relying solely on static initial context.
+| Identified Log Signature | Severity | Diagnostic Assessment & Root Cause | Mitigation / Resolution Status |
+| :--- | :---: | :--- | :--- |
+| `failed to check terminal shell support: internal: internal error` | 🟡 WARNING | Non-fatal artifact from the IDE's Go binary attempting to verify TTY capabilities when launching shells in non-interactive sandbox environments. | **Harmless False-Positive** - Standard execution is unaffected. |
+| `Failed to write server states, eagerly loading all tools: failed to get server directory` | 🟡 WARNING | Occurs during startup because the isolated container restricts desktop-level write permissions for direct caching paths. | **Handled Gracefully** - The IDE successfully falls back to eagerly loading all tool servers dynamically. |
+| `failed to resolve googleAgent config: neither PlanModel nor RequestedModel specified` | 🟡 WARNING | Temporary handshake artifact when the language server is initialized prior to client configuration details being pushed. | **Auto-Resolved** - Resolves automatically as soon as model parameters are synced from the client. |
 
 ---
 
-#### Verification Results
+#### 🧪 Forensics & System Health Audit
 
-##### 1. Hook Verification
-We ran the hook manually:
-```bash
-/home/dnguyen029/antigravity-project/.venv/bin/python3 .agents/hooks/archive_lessons.py
-```text
-- **Result**: Successfully generated embeddings and synced to both Supabase (ID: 1347) and Supermemory.
+##### 1. Drift & Trajectory Forensics
+- Checked all system directories for corrupted trajectory (`.pb`) files.
+- All conversation files and implicit schemas are intact (none are truncated or zero bytes).
+- Analyzed `transcript.jsonl` step execution history. All interactions are confirmed to be linear, sequential, and free of runaway loops or context amnesia.
 
-##### 2. Active Tool Verification
-We tested the new `search_memory` tool using a mock diagnostic script:
-```bash
-/home/dnguyen029/venv/bin/python scratch/test_mcp.py
-```text
-- **Result**: Executed successfully, returning active, matching context from both Supermemory and Supabase.
+##### 2. MCP Connection Check
+- Run command: `/home/dnguyen029/antigravity-project/.venv/bin/python3 app_build/verify_mcp_connections.py`
+- **Result**: **Passed**. All configured tool servers (Exa, Supabase, Toon-mcp, Context-mcp, and Google Conversational Agents) are verified as online and connected.
 
----
+## 📌 Walkthrough: Schema Alignment & WISMO Mock Data Removal (Date: N/A | Match Score: 0.560)
 
 ### Walkthrough: Schema Alignment & WISMO Mock Data Removal
 
@@ -209,168 +167,47 @@ We executed the pre-flight connection verification script to confirm all servers
 We created a diagnostic script ([`scratch/test_exa.py`](file:///home/dnguyen029/antigravity-project/scratch/test_exa.py)) to emulate a full `tools/call` JSON-RPC handshake.
 - **Result**: **SUCCESS** (Exa returns live search results cleanly under the updated configuration).
 
-## 📌 Walkthrough: Schema Alignment & WISMO Mock Data Removal (Date: N/A | Match Score: 0.609)
+## 📌 Walkthrough — WISMO Latency Optimization & Turn-Bypass (Date: N/A | Match Score: 0.550)
 
-### Walkthrough: Schema Alignment & WISMO Mock Data Removal
+### Walkthrough — WISMO Latency Optimization & Turn-Bypass
 
-We have successfully realigned the lead logging parameter schema from `phone` to `phone_number` across all receptionist app layers, updated the unit tests, and removed the fallback mock shipping response from WISMO lookup routines.
+This update documents the successful implementation of latency optimizations and prompt-level Turn-Bypass.
 
-#### Changes Completed
+#### Optimizations Implemented
 
-##### 1. Schema Alignment (`phone` ➔ `phone_number`)
+##### 1. Credentials Caching (`app/tools_lib/sheets.py`)
+- Migrated the Google Sheets API client authentication logic from instance-level initialization to a module-level `_SHARED_CREDENTIALS` cache.
+- This saves **300ms – 800ms** by avoiding redundant oauth token refresh network calls on every tool call in steady state.
 
-- **[MODIFY] [tools.py](file:///home/dnguyen029/antigravity-project/app_build/receptionist/app/tools.py)**:
+##### 2. Pre-fetching on Transition (`app/agent.py`)
+- Introduced `wismo_sub_agent_callback` associated with the `wismo_receptionist` specialist.
+- Upon transition to the WISMO agent, the callback automatically executes a lookup against the mock sheets for the caller's phone number and serializes the result into the session state under `state["auto_wismo_result"]`.
+- This removes sheets network I/O latency (**500ms – 1,000ms**) from the LLM tool-calling cycle.
 
-  - Renamed the `phone` parameter to `phone_number` in the `log_lead` function signature.
+##### 3. Prompt-Level Turn-Bypass (`wismo_receptionist.txt`)
+- Rewrote rules in the WISMO prompt instruction to inspect `auto_wismo_result` first.
+- If present in the session state, the agent immediately uses the cached details to greet the caller rather than issuing a tool call to `wismo_lookup()`.
+- Bypasses one complete LLM turn, saving **1.5s – 2.0s** on start.
 
-  - Aligned the logging dictionary constructor and the `create_ticket` call parameters to match the new `phone_number` key.
-
-- **[MODIFY] [sheets.py (Production)](file:///home/dnguyen029/antigravity-project/app_build/receptionist/app/tools_lib/sheets.py)**:
-
-  - Updated row values mapping in `append_log` and `upsert_log` to fetch `data.get("phone_number", "")` instead of `phone`.
-
-- **[MODIFY] [sheets.py (Simulator)](file:///home/dnguyen029/antigravity-project/app_build/tools/sheets.py)**:
-
-  - Synced the offline simulator's sheets client row mapping to use `phone_number`.
-
-- **[MODIFY] [zendesk.py](file:///home/dnguyen029/antigravity-project/app_build/receptionist/app/tools_lib/zendesk.py)**:
-
-  - Renamed the `phone` parameter to `phone_number` in the `create_ticket` function signature.
-
-  - Updated the ticket description text block and the `requester` configuration payload.
-
-- **[MODIFY] [main.py](file:///home/dnguyen029/antigravity-project/app_build/main.py)**:
-
-  - Changed the Pydantic field inside the `LeadPayload` model to `phone_number`.
-
-  - Updated `_handle_lead_logging` payload parsing.
-
-##### 2. WISMO Mock Data Removal
-
-- **[MODIFY] [tools.py](file:///home/dnguyen029/antigravity-project/app_build/receptionist/app/tools.py)**:
-
-  - Removed the hardcoded FedEx mock shipping fallback block from `wismo_lookup`. When no Zendesk ticket is found, the tool now returns `{"success": True, "found": False, "details": "No order found for this PO."}`.
-
-- **[MODIFY] [main.py](file:///home/dnguyen029/antigravity-project/app_build/main.py)**:
-
-  - Removed the mock shipping fallback dictionary from `_handle_wismo_lookup`. When no tickets are returned, it now maps to `{"success": True, "found": False, "details": "No order found for this PO."}`.
-
-##### 3. Unit Test Updates
-
-- **[MODIFY] [test_zendesk.py](file:///home/dnguyen029/antigravity-project/app_build/receptionist/tests/unit/test_zendesk.py)**:
-
-  - Renamed the unit test invocation parameter keyword arguments from `phone` to `phone_number` to prevent `TypeError` failures.
+##### 4. Mock Short-Circuit (`app/tools.py`)
+- Added a fast-path cache read to `wismo_lookup()` to return the pre-fetched result directly if called without arguments.
 
 ---
 
 #### Verification Results
 
-##### 1. Automated Test Suite
+##### 1. Performance Micro-benchmark
+- Ran the latency timing script `test_latency.py`.
+- **Result**: Cache-hit lookup completes in **0.03ms** (sub-50ms constraint validated).
 
-We executed the receptionist test suite via the virtual environment's pytest runtime:
-
-```bash
-.venv/bin/pytest
-```text
-
-**Output:**
-
-```text
-tests/integration/test_agent.py .                                        [ 16%]
-tests/integration/test_agent_runtime_app.py ..                           [ 50%]
-tests/unit/test_dummy.py .                                               [ 66%]
-tests/unit/test_zendesk.py ..                                            [100%]
-======================= 6 passed, 14 warnings in 21.07s ========================
-```text
-
-- **Result**: **SUCCESS**
-
-##### 2. Manual Verification
-
-We initiated the interactive simulator mode and verified that the server boots successfully, registers incoming terminal inputs, and terminates cleanly under the updated schema:
-
-```bash
-/home/dnguyen029/antigravity-project/.venv/bin/python3 app_build/main.py --interactive
-```text
-
-**Output:**
-
-```text
-2026-06-12 03:07:44,123 [INFO] ⚡ Starting Optimized Agent Simulation Mode...
-
-=======================================================
-Welcome to Ariel Bath AI Receptionist Routing Simulator
-=======================================================
-Caller: exit
-```text
-
-- **Result**: **SUCCESS**
-
-#### Hardened Orchestrator Rules (KISS/YAGNI/Postel's Law alignment)
-
-We updated the Orchestrator's ruleset to balance simplicity and robustness using standard industry practices.
-
-##### 1. Rules Update
-- **[MODIFY] [.agents/rules/orchestrator.md](file:///home/dnguyen029/antigravity-project/.agents/rules/orchestrator.md)**:
-  - Injected the **Balance Simplicity & Robustness** rule under the technical lead mode guidelines.
-
-##### 2. Manual Verification
-- We verified the markdown file is parsed cleanly and successfully by the system.
-- Confirmed that the new instructions strictly balance the KISS/YAGNI principles with defensive error checking (Postel's Law) to avoid both over-engineering and weak hacks.
-
-#### Walkthrough: Exa MCP Server Configuration Correction
-
-We have successfully diagnosed and resolved the Exa MCP server `EOF` connection error by transitioning the API key propagation from HTTP headers to URL query parameters.
-
-##### 1. Configuration Realignment
-- **[MODIFY] [mcp_config.json (local)](file:///home/dnguyen029/antigravity-project/mcp_config.json)**:
-  - Updated the `exa` arguments array to append `?exaApiKey=$EXA_API_KEY&tools=web_search_exa,web_search_advanced_exa,web_fetch_exa` to the URL.
-- **[MODIFY] [mcp_config.json (global IDE)](file:///home/dnguyen029/.gemini/antigravity-ide/mcp_config.json)**:
-  - Synced the global IDE configuration with the local correction.
-
-##### 2. Connection Verification Handshake
-We executed the pre-flight connection verification script to confirm all servers report `🟢 CONNECTED`:
-- **Result**: **SUCCESS** (6/6 servers connected).
-
-##### 3. Manual Tool Execution Verification
-We created a diagnostic script ([`scratch/test_exa.py`](file:///home/dnguyen029/antigravity-project/scratch/test_exa.py)) to emulate a full `tools/call` JSON-RPC handshake.
-- **Result**: **SUCCESS** (Exa returns live search results cleanly under the updated configuration).
-
-## 📌 Automate Lessons Learned & Swarm Mandates: Walkthrough (Date: N/A | Match Score: 0.607)
-
-### Automate Lessons Learned & Swarm Mandates: Walkthrough
-
-We have successfully implemented and verified the lessons learned automation hook, as well as the rules enforcing strict multi-agent swarm execution.
-
-#### Changes Completed
-
-##### 1. Automation Hook Implementation
-- **Created [archive_lessons.py](file:///home/dnguyen029/antigravity-project/.agents/hooks/archive_lessons.py)**: Built a script that compares the SHA-256 hash of the walkthrough against a cache, and automatically POSTs updated walkthrough content to the Supabase `lessons_learned` table.
-- **Registered Hook in [hooks.json](file:///home/dnguyen029/antigravity-project/.agents/hooks.json)**: Added the script execution to the `PostInvocation` array under `sync-context` so it runs automatically at the end of every IDE agent invocation.
-
-##### 2. Strict Swarm Orchestration Rules
-- **Modified [AGENTS.md](file:///home/dnguyen029/antigravity-project/.agents/rules/AGENTS.md)**: Added `Rule 13 — Swarm Orchestration Mandate` to prevent the agent from bypassing the Orchestrator/Builder/Auditor/SRE sequence when `/orchestrate` is requested.
-- **Modified [GEMINI.md](file:///home/dnguyen029/antigravity-project/.agents/rules/GEMINI.md)**: Synced the mandate into the strict guidelines block of the Gemini agent specifications.
-
-##### 3. Standards Compliance Audit
-- Scanned all 43 active skill folders and rule files in [.agents/skills/](file:///home/dnguyen029/antigravity-project/.agents/skills/) and [.agents/rules/](file:///home/dnguyen029/antigravity-project/.agents/rules/).
-- Verified that **100% of rules and skills** have compliant YAML frontmatter headers.
+##### 2. Automated Test Suite
+- Executed `pytest` suite.
+- **Result**: **11/11 tests passed** (including the new `test_wismo_lookup_cache_hit`).
 
 ---
 
-#### Verification Results
-
-##### Lessons Learned Hook Verification
-We manually triggered the new hook script:
-```bash
-/home/dnguyen029/antigravity-project/.venv/bin/python3 /home/dnguyen029/antigravity-project/.agents/hooks/archive_lessons.py
-```text
-- **First Run**: Detected modified walkthrough and successfully uploaded it:
-  `Successfully archived walkthrough lesson to Supabase (ID: 1267)`
-- **Subsequent Runs**: Checked cache and skipped database insert, confirming correct behavior.
-
-##### 4. Lifecycle Hooks Hardening
-- **Harkened safety-gate path**: Updated [hooks.json](file:///home/dnguyen029/antigravity-project/.agents/hooks.json) to change the `PreToolUse` command from using `/usr/bin/env python3` and a relative path to the absolute python path (`/home/dnguyen029/antigravity-project/.venv/bin/python3`) and the absolute script path (`/home/dnguyen029/antigravity-project/.agents/hooks/safety_gate.py`). This prevents directory resolution failures when the working directory changes.
-
-All systems are validated, hardened, and fully operational.
+#### Live Deployment Status
+- **Prompts Synchronized**: Prompts pushed to Dialogflow CX (draft environment).
+- **Backend Deployed**: vertex AI Agent Engine updated successfully.
+  - Runtime ID: `projects/106093400023/locations/us-central1/reasoningEngines/3503161144082694144`
 

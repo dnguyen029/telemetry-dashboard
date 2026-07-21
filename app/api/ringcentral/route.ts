@@ -179,25 +179,38 @@ export async function GET(request: Request) {
         dbHotspot = grid;
       }
 
+      const tz = "America/Los_Angeles";
+      const now = new Date();
+      const getLocalDateStr = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: tz });
+
+      const dateGrid = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(now);
+        d.setDate(d.getDate() - (6 - i));
+        const isoDate = getLocalDateStr(d);
+        const dayLabel = d.toLocaleDateString("en-US", { weekday: "short", timeZone: tz });
+        return { isoDate, dayLabel };
+      });
+
+      const startDate = dateGrid[0].isoDate;
+      const endDate = dateGrid[6].isoDate;
+
       const { data: dailyData } = await supabase
         .from("daily_call_telemetry")
         .select("date, inbound_calls, answered_calls, missed_calls")
-        .order("date", { ascending: false })
-        .limit(7);
+        .gte("date", startDate)
+        .lte("date", endDate);
 
-      if (dailyData && dailyData.length > 0) {
-        const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-        dbDailyTrends = dailyData.map(row => {
-          const [yr, mo, dy] = row.date.split('-').map(Number);
-          const dateObj = new Date(yr, mo - 1, dy);
-          return {
-            day: days[dateObj.getDay()],
-            inbound: row.inbound_calls || 0,
-            answered: row.answered_calls || 0,
-            missed: row.missed_calls || 0
-          };
-        }).reverse();
-      }
+      const dbMap = new Map((dailyData || []).map(r => [r.date, r]));
+
+      dbDailyTrends = dateGrid.map(({ isoDate, dayLabel }) => {
+        const record = dbMap.get(isoDate);
+        return {
+          day: dayLabel,
+          inbound: record?.inbound_calls ?? 0,
+          answered: record?.answered_calls ?? 0,
+          missed: record?.missed_calls ?? 0
+        };
+      });
 
       const { data: sparklineData } = await supabase
         .from("daily_call_telemetry")
@@ -624,19 +637,23 @@ function buildAnalyticsPayload(
     }
   });
 
-  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const orderedDays = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date();
+  const tz = "America/Los_Angeles";
+  const now = new Date();
+  const getLocalDateStr = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: tz });
+
+  const dateGrid = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(now);
     d.setDate(d.getDate() - (6 - i));
-    return dayNames[d.getDay()];
+    const dayLabel = d.toLocaleDateString("en-US", { weekday: "short", timeZone: tz });
+    return { dayLabel };
   });
 
-  const dailyTrends = dbDailyTrends || orderedDays.map((day, idx) => {
+  const dailyTrends = dbDailyTrends || dateGrid.map(({ dayLabel }, idx) => {
     const ratio = idx === 6 ? 1 : 0.8 + Math.random() * 0.4;
     const inbound = Math.round(totalCallsToday * ratio);
     const missed = Math.round(missedCalls * ratio);
     return {
-      day,
+      day: dayLabel,
       inbound,
       answered: inbound - missed,
       missed
