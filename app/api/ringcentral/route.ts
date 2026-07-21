@@ -620,13 +620,12 @@ function buildAnalyticsPayload(
     }
   });
 
-  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  const todayIdx = new Date().getDay();
-  const orderedDays = [];
-  for (let i = 6; i >= 0; i--) {
-    const idx = (todayIdx - i + 7) % 7;
-    orderedDays.push(days[idx === 0 ? 6 : idx - 1]);
-  }
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const orderedDays = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    return dayNames[d.getDay()];
+  });
 
   const dailyTrends = dbDailyTrends || orderedDays.map((day, idx) => {
     const ratio = idx === 6 ? 1 : 0.8 + Math.random() * 0.4;

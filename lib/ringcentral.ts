@@ -142,9 +142,9 @@ export function aggregateCallLogs(
   // Group queue logs by Session ID (or caller phone + 3-min window fallback)
   const sessionMap = new Map<string, RingCentralCallLog[]>();
   queueLogs.forEach((log) => {
-    const fromPhone = log.from?.phoneNumber || log.from?.extensionNumber || "unknown";
-    const timeKey = log.startTime ? log.startTime.substring(0, 16) : "notime";
-    const sessionKey = log.sessionId || log.telephonySessionId || `${fromPhone}_${timeKey}`;
+    const fromPhone = log.from?.phoneNumber || log.from?.name || log.from?.extensionNumber;
+    const timeKey = log.startTime ? log.startTime.substring(0, 16) : Math.random().toString();
+    const sessionKey = log.sessionId || log.telephonySessionId || (fromPhone ? `${fromPhone}_${timeKey}` : (log.id || `anon_${Math.random()}`));
 
     if (!sessionMap.has(sessionKey)) {
       sessionMap.set(sessionKey, []);
