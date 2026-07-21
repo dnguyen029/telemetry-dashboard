@@ -229,17 +229,17 @@ export async function GET(request: Request) {
       console.error("Failed to query DB for chart data:", dbErr);
     }
 
-    // Calculate Dynamic Capacity Window
-    let shiftSeconds = 36000; // 10 hours for past days
+    // Calculate Dynamic Capacity Window (Business Hours alignment starting at 8:00 AM PST)
+    let shiftSeconds = 32400; // 9 hours default for past days (8am - 5pm)
     if (isToday) {
       const now = new Date();
-      const start = new Date(now.toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
-      start.setHours(0, 0, 0, 0);
-      const elapsed = (now.getTime() - start.getTime()) / 1000;
-      shiftSeconds = Math.max(3600, Math.min(36000, elapsed)); // clamp between 1 and 10 hours
+      const shiftStart = new Date(now.toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
+      shiftStart.setHours(8, 0, 0, 0); // 8:00 AM PST
+      const elapsedSinceShift = Math.max(0, (now.getTime() - shiftStart.getTime()) / 1000);
+      shiftSeconds = Math.max(1800, Math.min(32400, elapsedSinceShift)); // 30m to 9h clamp
     }
 
-    // Occupancy calculation for all extensions (no slice)
+    // Occupancy calculation for all extensions
     const missedResultStatuses = ["Missed", "No Answer", "Not Answered", "Declined", "Sent to Voicemail", "Voicemail"];
     const extensions = recordsList.map((r: RingCentralExtension) => {
       const agentLogs = logs.filter((l: RingCentralCallLog) => {
@@ -264,7 +264,8 @@ export async function GET(request: Request) {
       !missedResultStatuses.includes(l.result) && l.result !== "Abandoned" && l.result !== "Hang Up"
     );
     const totalTalkTime = answeredLogs.reduce((acc: number, log: RingCentralCallLog) => acc + (log.duration || 0), 0);
-    const capacitySeconds = Math.max(1, enabledUserCount) * shiftSeconds;
+    const activeStaffCount = Math.max(1, presenceCounts.online);
+    const capacitySeconds = activeStaffCount * shiftSeconds;
     const occupancyRate = Math.min(98, Math.round((totalTalkTime / capacitySeconds) * 100));
 
     const missedCallsList = metrics.queueLogs
@@ -287,7 +288,7 @@ export async function GET(request: Request) {
     const prevDateStr = prevDate.toISOString().split("T")[0];
 
     // Fetch previous day's record for DoD, and WoW/MoM/QoQ via RPC
-    const [prevDayRes, wowRes, momRes, qoqRes] = await Promise.all([
+    let [prevDayRes, wowRes, momRes, qoqRes] = await Promise.all([
       supabase
         .from("daily_call_telemetry")
         .select("inbound_calls, answered_calls, missed_calls, abandoned_calls, avg_wait_seconds")
@@ -297,6 +298,59 @@ export async function GET(request: Request) {
       supabase.rpc("get_period_comparison", { num_days: 30 }),
       supabase.rpc("get_period_comparison", { num_days: 90 })
     ]);
+
+        let prevDayData = prevDayRes.data;
+
+        if (!prevDayData) {
+          try {
+            const prevBounds = getPacificDateBounds(prevDateStr);
+            let prevLogs: RingCentralCallLog[] = [];
+            let pPage = 1;
+            let pHasMore = true;
+            while (pHasMore && pPage <= 5) {
+              const pLogUrl = `${server}/restapi/v1.0/account/~/call-log?dateFrom=${prevBounds.dateFrom}&dateTo=${prevBounds.dateTo}&view=Simple&direction=Inbound&perPage=1000&page=${pPage}`;
+              const pLogRes = await fetch(pLogUrl, {
+                headers: { "Authorization": `Bearer ${accessToken}`, "Accept": "application/json" },
+                cache: "no-store"
+              });
+              if (pLogRes.ok) {
+                const pLogData = await pLogRes.json();
+                const pRecords = pLogData.records || [];
+                prevLogs = prevLogs.concat(pRecords);
+                if (pRecords.length < 1000 || !pLogData.navigation?.nextPage) pHasMore = false;
+                else pPage++;
+              } else {
+                pHasMore = false;
+              }
+            }
+            if (prevLogs.length > 0) {
+              const prevAggregated = aggregateCallLogs(prevLogs, recordsList, userPhoneNumbers);
+              prevDayData = {
+                inbound_calls: prevAggregated.totalCalls,
+                answered_calls: prevAggregated.answeredCalls,
+                missed_calls: prevAggregated.missedCalls,
+                abandoned_calls: prevAggregated.abandonedCalls,
+                avg_wait_seconds: prevAggregated.avgWaitSeconds
+              };
+
+          // Background auto-seed into Supabase for future requests
+          supabase
+            .from("daily_call_telemetry")
+            .upsert({
+              date: prevDateStr,
+              inbound_calls: prevAggregated.totalCalls,
+              answered_calls: prevAggregated.answeredCalls,
+              missed_calls: prevAggregated.missedCalls,
+              abandoned_calls: prevAggregated.abandonedCalls,
+              avg_wait_seconds: prevAggregated.avgWaitSeconds,
+              updated_at: new Date().toISOString()
+            })
+            .then();
+        }
+      } catch (prevFetchErr) {
+        console.error("Failed live fallback fetch for yesterday's telemetry:", prevFetchErr);
+      }
+    }
 
     const formatDbComparison = (dbResult: { data: PeriodComparisonRow[] | null }) => {
       const data: PeriodComparisonRow = dbResult.data?.[0] || {
@@ -373,7 +427,7 @@ export async function GET(request: Request) {
 
     // Combine into full payload
     const comparisonData = {
-      DoD: buildDoDComparison(metrics, prevDayRes.data),
+      DoD: buildDoDComparison(metrics, prevDayData),
       WoW: formatDbComparison(wowRes),
       MoM: formatDbComparison(momRes),
       QoQ: formatDbComparison(qoqRes)
@@ -387,6 +441,7 @@ export async function GET(request: Request) {
       metrics.avgWaitSeconds,
       activeQueueCount,
       presenceCounts.online,
+      presenceCounts.onCall,
       extensions,
       metrics.hourlyVolume,
       metrics.hourlyAnswered,
@@ -494,6 +549,7 @@ function buildAnalyticsPayload(
   avgWaitSeconds: number,
   activeQueueCount: number,
   agentsOnline: number,
+  agentsOnCall: number,
   extensions: { id: string; extensionNumber: string; name: string; type: string; status: string; occupancy: number }[],
   hourlyVolume: number[],
   hourlyAnswered: number[],
@@ -611,6 +667,7 @@ function buildAnalyticsPayload(
       avgWaitSeconds,
       activeQueueCount,
       agentsOnline,
+      agentsOnCall,
       agentOccupancy: agentOccupancy !== undefined ? agentOccupancy : 72
     },
     activeQueues,

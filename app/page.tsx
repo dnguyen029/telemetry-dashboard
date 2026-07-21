@@ -85,6 +85,7 @@ interface RingCentralTelemetryData {
     avgWaitSeconds: number;
     activeQueueCount: number;
     agentsOnline: number;
+    agentsOnCall?: number;
     agentOccupancy: number;
   };
   activeQueues: ActiveQueue[];
@@ -638,7 +639,7 @@ export default function DashboardSuite() {
                               </div>
                             ))
                           ) : (
-                            <p>No queued connections</p>
+                            <p>Live wait count • 0 callers in queue</p>
                           )}
                         </div>
                       </CardContent>
@@ -672,7 +673,12 @@ export default function DashboardSuite() {
                         <Users className="w-4 h-4 text-blue-500" />
                       </CardHeader>
                       <CardContent className="space-y-1.5">
-                        <div className="text-3xl font-bold text-slate-800 dark:text-white font-mono">{rcData.metrics.agentsOnline}</div>
+                        <div className="text-3xl font-bold text-slate-800 dark:text-white font-mono flex items-baseline justify-between">
+                          <span>{rcData.metrics.agentsOnline}</span>
+                          <span className="text-xs font-mono font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                            {rcData.metrics.agentsOnCall || 0} On Call
+                          </span>
+                        </div>
                         <p className="text-[10px] text-slate-500 dark:text-slate-400">Active Extensions monitored: {rcData.extensions?.length || 0}</p>
                       </CardContent>
                     </Card>
