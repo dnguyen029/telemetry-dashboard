@@ -627,7 +627,7 @@ export default function DashboardSuite() {
 
                     <Card className="glass-card shadow-sm border-slate-200 dark:border-slate-900 glow-amber">
                       <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-xs font-mono font-semibold tracking-wider text-slate-550 dark:text-slate-400 uppercase">Active Queue Lines</CardTitle>
+                        <CardTitle className="text-xs font-mono font-semibold tracking-wider text-slate-550 dark:text-slate-400 uppercase">Live Callers in Queue</CardTitle>
                         <BarChart2 className="w-4 h-4 text-amber-500" />
                       </CardHeader>
                       <CardContent className="space-y-1.5">
@@ -641,7 +641,7 @@ export default function DashboardSuite() {
                               </div>
                             ))
                           ) : (
-                            <p>Live wait count • 0 callers in queue</p>
+                            <p className="text-emerald-500 font-medium">Queue Clear • 0 callers waiting now</p>
                           )}
                         </div>
                       </CardContent>
