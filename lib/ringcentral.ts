@@ -201,10 +201,16 @@ export function aggregateCallLogs(
     avgWaitSeconds = Math.round(waitTimes.reduce((a: number, b: number) => a + b, 0) / waitTimes.length);
   }
 
-  // Populate hourly trends
+  // Populate hourly trends (in America/Los_Angeles timezone)
   queueLogs.forEach((log: RingCentralCallLog) => {
     if (log.startTime) {
-      const hour = new Date(log.startTime).getHours();
+      const hourStr = new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/Los_Angeles",
+        hour: "numeric",
+        hourCycle: "h23"
+      }).format(new Date(log.startTime));
+      const hour = (parseInt(hourStr, 10) || 0) % 24;
+
       if (hour >= 0 && hour < 24) {
         const isAns = isAcceptedCall(log) && (log.duration || 0) >= 45;
         const isMiss = isMissedStatusCall(log) && (log.duration || 0) >= 9;

@@ -169,8 +169,9 @@ export async function GET(request: Request) {
       if (hourlyData && hourlyData.length > 0) {
         const grid = Array.from({ length: 7 }, () => Array(24).fill(0));
         hourlyData.forEach(row => {
-          const dateObj = new Date(row.call_date);
-          const dayIdx = (dateObj.getDay() + 6) % 7; // Monday = 0, Sunday = 6
+          const [yr, mo, dy] = row.call_date.split("-").map(Number);
+          const dateObj = new Date(Date.UTC(yr, mo - 1, dy));
+          const dayIdx = (dateObj.getUTCDay() + 6) % 7; // Monday = 0, Sunday = 6
           const hour = row.hour_of_day;
           if (hour >= 0 && hour < 24) {
             grid[dayIdx][hour] += row.inbound_calls || 0;
@@ -639,7 +640,6 @@ function buildAnalyticsPayload(
 
   const tz = "America/Los_Angeles";
   const now = new Date();
-  const getLocalDateStr = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: tz });
 
   const dateGrid = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(now);
