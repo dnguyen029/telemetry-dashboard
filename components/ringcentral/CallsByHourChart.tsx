@@ -67,8 +67,8 @@ export default function CallsByHourChart({ hourlyTrends }: CallsByHourChartProps
   // Y-axis tick intervals
   const yTicks = [0, Math.round(maxVal / 2), maxVal];
 
-  // X-axis key intervals to draw (to avoid overcrowding text)
-  const xTicksIndices = [0, 4, 8, 12, 16, 20, 23];
+  // X-axis key intervals to draw (focusing on active business hours 6 AM to 8 PM)
+  const xTicksIndices = [6, 8, 10, 12, 14, 16, 18, 20];
 
   return (
     <div className="p-6 rounded-xl glass-card shadow-sm space-y-4">
