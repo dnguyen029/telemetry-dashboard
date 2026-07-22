@@ -104,6 +104,11 @@ export default function DailyTrendChart({ dailyTrends }: DailyTrendChartProps) {
             const inboundY = yScale(d.inbound);
             const answeredY = yScale(d.answered);
             const missedY = yScale(d.missed);
+
+            // Collision avoidance: if missedY and answeredY labels are too close, push missed label upward
+            const GAP_THRESHOLD = 18;
+            const gap = Math.abs(answeredY - missedY);
+            const missedShift = gap < GAP_THRESHOLD ? -(GAP_THRESHOLD - gap + 4) : 0;
             
             return (
               <g key={`persistent-labels-${idx}`} className="font-mono text-[9px] font-bold select-none pointer-events-none">
@@ -127,10 +132,10 @@ export default function DailyTrendChart({ dailyTrends }: DailyTrendChartProps) {
                   {d.answered}
                 </text>
 
-                {/* Missed (Red) label above point */}
+                {/* Missed (Red) label above point with collision shift */}
                 <text
                   x={xScale(idx)}
-                  y={missedY - 8}
+                  y={missedY - 8 + missedShift}
                   textAnchor="middle"
                   className="fill-red-500/90 dark:fill-red-400/95 font-semibold"
                 >

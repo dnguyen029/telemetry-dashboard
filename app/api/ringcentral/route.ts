@@ -213,6 +213,17 @@ export async function GET(request: Request) {
         };
       });
 
+      // Override today's entry in dbDailyTrends with live metrics if available
+      if (dbDailyTrends && dbDailyTrends.length > 0 && isToday) {
+        const lastIdx = dbDailyTrends.length - 1;
+        dbDailyTrends[lastIdx] = {
+          day: dateGrid[lastIdx].dayLabel,
+          inbound: metrics.totalCalls,
+          answered: metrics.answeredCalls,
+          missed: metrics.missedCalls
+        };
+      }
+
       const { data: sparklineData } = await supabase
         .from("daily_call_telemetry")
         .select("inbound_calls, answered_calls, missed_calls, abandoned_calls, avg_wait_seconds")
