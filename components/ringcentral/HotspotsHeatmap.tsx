@@ -18,7 +18,14 @@ export default function HotspotsHeatmap({ hotspotData }: HotspotsHeatmapProps) {
   if (!hotspotData || hotspotData.length === 0) return null;
 
   const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-  const businessHoursRange = Array.from({ length: 12 }, (_, i) => i + 6); // hours 6 to 17
+  const businessHoursRange = Array.from({ length: 15 }, (_, i) => i + 6); // hours 6 to 20 (6 AM to 8 PM)
+
+  const formatHeaderHourLabel = (h: number) => {
+    if (h === 0) return "12a";
+    if (h === 12) return "12p";
+    if (h > 12) return `${h - 12}p`;
+    return `${h}a`;
+  };
 
   const formatHourLabel = (h: number) => {
     if (h === 0) return "12 AM";
@@ -27,8 +34,8 @@ export default function HotspotsHeatmap({ hotspotData }: HotspotsHeatmapProps) {
     return `${h} AM`;
   };
 
-  // Slice hotspot data to business hours: 6 AM to 5 PM (indices 6 to 17 inclusive)
-  const slicedData = hotspotData.map(row => row.slice(6, 18));
+  // Slice hotspot data to hours 6 AM to 8 PM (indices 6 to 20 inclusive)
+  const slicedData = hotspotData.map(row => row.slice(6, 21));
 
   // Find max value in business hours data for scaling
   const maxVal = Math.max(...slicedData.flat(), 1);
@@ -69,14 +76,14 @@ export default function HotspotsHeatmap({ hotspotData }: HotspotsHeatmapProps) {
             {/* Empty top-left cell */}
             <div />
 
-            {/* X-axis hours (6 - 17) */}
-            <div className="grid grid-cols-12 gap-[3px] text-[9px] font-mono font-bold text-text-secondary/70 text-center select-none">
+            {/* X-axis hours (6 AM to 8 PM) */}
+            <div className="grid grid-cols-15 gap-[3px] text-[9px] font-mono font-bold text-text-secondary/70 text-center select-none">
               {businessHoursRange.map((h) => (
-                <span key={h} className="w-full">{h}</span>
+                <span key={h} className="w-full">{formatHeaderHourLabel(h)}</span>
               ))}
             </div>
 
-            {/* Matrix rows: Full day name + 12 business hour blocks */}
+            {/* Matrix rows: Full day name + 15 business hour blocks */}
             {daysOfWeek.map((day, dayIdx) => (
               <React.Fragment key={day}>
                 {/* Day label */}
@@ -84,8 +91,8 @@ export default function HotspotsHeatmap({ hotspotData }: HotspotsHeatmapProps) {
                   {day}
                 </span>
 
-                {/* 12 Heatmap blocks */}
-                <div className="grid grid-cols-12 gap-[3px]">
+                {/* 15 Heatmap blocks */}
+                <div className="grid grid-cols-15 gap-[3px]">
                   {slicedData[dayIdx]?.map((count, index) => {
                     const hourVal = index + 6; // Hour values 6 to 17
                     return (
