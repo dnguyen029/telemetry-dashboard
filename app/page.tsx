@@ -37,6 +37,8 @@ import DailyTrendChart from "@/components/ringcentral/DailyTrendChart";
 // Competitor Data
 import { CORE_PRODUCTS, CompetitorProduct } from "@/lib/competitorData";
 import CompetitorDashboard from "@/components/competitor/CompetitorDashboard";
+import StaffingDashboard from "@/components/ringcentral/StaffingDashboard";
+
 
 interface DailyTrend {
   day: string;
@@ -747,8 +749,13 @@ export default function DashboardSuite() {
             </div>
           )}
 
+          {/* STAFFING ANALYTICS VIEW */}
+          {activeSuiteTab === "staffing" && rcData && (
+            <StaffingDashboard data={rcData} />
+          )}
+
           {/* PLACEHOLDER VIEWS */}
-          {["staffing", "performance", "quality", "reports", "settings"].includes(activeSuiteTab) && (
+          {["performance", "quality", "reports", "settings"].includes(activeSuiteTab) && (
             <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4 animate-in fade-in duration-300">
               <div className="p-4 rounded-full bg-blue-600/10 border border-blue-500/20 text-blue-600 dark:text-blue-400">
                 <LayoutDashboard className="w-10 h-10 animate-pulse" />
@@ -756,7 +763,7 @@ export default function DashboardSuite() {
               <div className="text-center space-y-1.5">
                 <h2 className="text-lg font-bold capitalize text-slate-800 dark:text-white">{activeSuiteTab} Analytics</h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm">
-                  This section is currently under development. Real-time active data sets are configured under Call & Email Volume and Data tabs.
+                  This section is currently under development.
                 </p>
               </div>
             </div>
