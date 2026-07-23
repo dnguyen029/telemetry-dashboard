@@ -13,7 +13,7 @@ interface RingCentralData {
     serviceLevelSLA?: number;
     avgWaitSeconds: number;
   };
-  extensions: { id: string; extensionNumber: string; name: string; type: string; status: string; occupancy: number }[];
+  extensions: { id: string; extensionNumber: string; name: string; type: string; status: string; presenceStatus?: string; telephonyStatus?: string; dndStatus?: string; acceptCallQueueCalls?: boolean; activeCallDirection?: string; occupancy: number }[];
   queue8Allocations: { productSpecs: number; damagesDefects: number; wismo: number; unassigned: number };
 }
 
@@ -101,13 +101,15 @@ export default function StaffingDashboard({ data }: { data: RingCentralData }) {
                   <TableHead className="text-xs">Ext #</TableHead>
                   <TableHead className="text-xs">Agent Name</TableHead>
                   <TableHead className="text-xs">Live Status</TableHead>
+                  <TableHead className="text-xs">Direction</TableHead>
+                  <TableHead className="text-xs">Queue Status</TableHead>
                   <TableHead className="text-xs text-right">Occupancy</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {(!extensions || extensions.filter(e => e.type === "User").length === 0) && (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center text-xs text-slate-500 py-8">
+                    <TableCell colSpan={6} className="text-center text-xs text-slate-500 py-8">
                       No staff extensions returned in today&apos;s telemetry payload.
                     </TableCell>
                   </TableRow>
@@ -121,12 +123,24 @@ export default function StaffingDashboard({ data }: { data: RingCentralData }) {
                         {ext.status}
                       </Badge>
                     </TableCell>
+                    <TableCell>
+                      {ext.activeCallDirection ? (
+                        <Badge className="text-[10px] font-mono px-1.5 py-0.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                          {ext.activeCallDirection}
+                        </Badge>
+                      ) : <span className="text-xs text-slate-400">—</span>}
+                    </TableCell>
+                    <TableCell>
+                      <span className={`text-xs font-medium ${ext.acceptCallQueueCalls !== false ? "text-emerald-600 dark:text-emerald-400" : "text-amber-500"}`}>
+                        {ext.acceptCallQueueCalls !== false ? "Queue Active" : "Queue Off"}
+                      </span>
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         <div className="w-20 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
                           <div
                             className={`h-full rounded-full transition-all
-                              ${ext.occupancy >= 95 ? "bg-red-500" : ext.occupancy >= 80 ? "bg-amber-500" : "bg-emerald-500"}`}
+                              ${ext.status === "On Call" ? "bg-blue-500" : ext.occupancy >= 80 ? "bg-amber-500" : "bg-emerald-500"}`}
                             style={{ width: `${Math.min(ext.occupancy, 100)}%` }}
                           />
                         </div>
