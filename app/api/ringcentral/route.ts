@@ -83,7 +83,13 @@ export async function GET(request: Request) {
       .limit(1);
 
     if (!cacheErr && cacheRows && cacheRows.length > 0 && cacheRows[0].data) {
-      return NextResponse.json({ ...(cacheRows[0].data as Record<string, unknown>), cached: true });
+      const cacheTime = new Date(cacheRows[0].updated_at).getTime();
+      const nowTime = Date.now();
+      const ageSeconds = (nowTime - cacheTime) / 1000;
+
+      if (!isToday || ageSeconds < CACHE_TTL) {
+        return NextResponse.json({ ...(cacheRows[0].data as Record<string, unknown>), cached: true });
+      }
     }
   } catch (err) {
     console.error("Cache read failed, querying live API:", err);
