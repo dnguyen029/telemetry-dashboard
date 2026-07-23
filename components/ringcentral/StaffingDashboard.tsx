@@ -19,6 +19,7 @@ interface RingCentralData {
 
 const STATUS_COLORS: Record<string, string> = {
   Available: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+  "On Call":  "bg-blue-500/15 text-blue-600 dark:text-blue-400",
   "In Call":  "bg-blue-500/15 text-blue-600 dark:text-blue-400",
   Busy:       "bg-amber-500/15 text-amber-500 dark:text-amber-400",
   Offline:    "bg-slate-500/15 text-slate-400",

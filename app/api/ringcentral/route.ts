@@ -75,17 +75,15 @@ export async function GET(request: Request) {
 
   // 1. Attempt Cache Lookup in Supabase
   try {
-    const { data: cacheRow, error: cacheErr } = await supabase
+    const { data: cacheRows, error: cacheErr } = await supabase
       .from("telemetry_cache")
       .select("data, updated_at")
-      .eq("id", CACHE_ID)
-      .single();
+      .or(`id.eq.${CACHE_ID},id.eq.ringcentral_metrics`)
+      .order("updated_at", { ascending: false })
+      .limit(1);
 
-    if (!cacheErr && cacheRow) {
-      const ageSeconds = (Date.now() - new Date((cacheRow as { updated_at: string }).updated_at).getTime()) / 1000;
-      if (ageSeconds < CACHE_TTL) {
-        return NextResponse.json({ ...(cacheRow as { data: Record<string, unknown> }).data, cached: true });
-      }
+    if (!cacheErr && cacheRows && cacheRows.length > 0 && cacheRows[0].data) {
+      return NextResponse.json({ ...(cacheRows[0].data as Record<string, unknown>), cached: true });
     }
   } catch (err) {
     console.error("Cache read failed, querying live API:", err);
