@@ -262,26 +262,39 @@ export async function GET(request: Request) {
       shiftSeconds = Math.max(1800, Math.min(32400, elapsedSinceShift)); // 30m to 9h clamp
     }
 
-    // Occupancy calculation for all extensions
+    // Live presence & occupancy calculation for all extensions
     const missedResultStatuses = ["Missed", "No Answer", "Not Answered", "Declined", "Sent to Voicemail", "Voicemail"];
+    const presenceMap = presenceCounts.presenceMap || new Map();
+
     const extensions = recordsList.map((r: RingCentralExtension) => {
+      const pInfo = presenceMap.get(String(r.extensionNumber)) || presenceMap.get(String(r.id));
+      const pStatus = pInfo?.presenceStatus;
+      const tStatus = pInfo?.telephonyStatus;
+
+      const isOnCall = tStatus === "CallConnected" || tStatus === "Ringing" || pStatus === "Busy";
+      const liveStatus = isOnCall ? "On Call" : (pStatus === "Available" ? "Available" : (pStatus === "Offline" ? "Offline" : "Available"));
+
       const agentLogs = logs.filter((l: RingCentralCallLog) => {
         const isAnswered = !missedResultStatuses.includes(l.result) && l.result !== "Abandoned" && l.result !== "Hang Up";
         if (!isAnswered) return false;
         return l.to?.extensionNumber === r.extensionNumber || l.from?.extensionNumber === r.extensionNumber;
       });
       const agentTalkTime = agentLogs.reduce((acc: number, log: RingCentralCallLog) => acc + (log.duration || 0), 0);
-      const agentOccupancy = Math.min(100, Math.round((agentTalkTime / shiftSeconds) * 100));
+      const agentOccupancy = isOnCall ? 100 : Math.min(100, Math.round((agentTalkTime / shiftSeconds) * 100));
 
       return {
         id: r.id,
         extensionNumber: r.extensionNumber,
         name: r.name,
         type: r.type,
-        status: r.status,
+        status: liveStatus,
+        presenceStatus: pStatus || liveStatus,
+        telephonyStatus: tStatus || (isOnCall ? "OnCall" : "NoCall"),
         occupancy: agentOccupancy
       };
     });
+
+    extensions.sort((a, b) => (a.status === "On Call" ? -1 : b.status === "On Call" ? 1 : 0));
 
     const answeredLogs = logs.filter((l: RingCentralCallLog) => 
       !missedResultStatuses.includes(l.result) && l.result !== "Abandoned" && l.result !== "Hang Up"

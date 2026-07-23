@@ -257,7 +257,7 @@ export function aggregateCallLogs(
 export async function getAgentPresenceCounts(
   server: string,
   accessToken: string
-): Promise<{ online: number; onCall: number; available: number; dnd: number; offline: number }> {
+): Promise<{ online: number; onCall: number; available: number; dnd: number; offline: number; presenceMap: Map<string, RingCentralPresenceRecord> }> {
   const presenceUrl = `${server}/restapi/v1.0/account/~/presence?perPage=100`;
   const res = await fetch(presenceUrl, {
     headers: {
@@ -272,8 +272,9 @@ export async function getAgentPresenceCounts(
   }
 
   const data = await res.json();
-  const records = (data.records || []) as RingCentralPresenceRecord[];
+  const records = (data.records || []) as (RingCentralPresenceRecord & { extension?: { id?: number; extensionNumber?: string } })[];
 
+  const presenceMap = new Map<string, RingCentralPresenceRecord>();
   let online = 0;
   let onCall = 0;
   let available = 0;
@@ -281,6 +282,11 @@ export async function getAgentPresenceCounts(
   let offline = 0;
 
   records.forEach((r) => {
+    const extNum = r.extension?.extensionNumber ? String(r.extension.extensionNumber) : "";
+    const extId = r.extension?.id ? String(r.extension.id) : "";
+    if (extNum) presenceMap.set(extNum, r);
+    if (extId) presenceMap.set(extId, r);
+
     const pStatus = r.presenceStatus;
     const tStatus = r.telephonyStatus;
 
@@ -298,7 +304,7 @@ export async function getAgentPresenceCounts(
     }
   });
 
-  return { online, onCall, available, dnd, offline };
+  return { online, onCall, available, dnd, offline, presenceMap };
 }
 
 export async function getActiveQueueCount(
